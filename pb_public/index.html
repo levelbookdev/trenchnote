@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrenchNote — Dashboard</title>
+
+<!--
+  TrenchNote dashboard: every asset grouped by where it currently is, plus
+  the most recent entries from the movements ledger. Read-only — moving
+  things happens on asset.html (scan the tag), adding things happens in the
+  PocketBase admin UI.
+
+  Three fetches on load, then everything is grouped client-side:
+    1. locations  (the grouping buckets)
+    2. assets     (expand=item so each row can show what the thing is)
+    3. movements  (expand=asset + nested asset.item + both locations —
+                   PocketBase resolves nested expands like "asset.item"
+                   in the same request)
+-->
+<script defer src="vendor/alpine.min.js"></script>
+
+<style>
+  /* Same field-utility tokens as asset.html — one design, three pages. */
+  :root {
+    --ink:    #14161a;
+    --paper:  #ffffff;
+    --steel:  #5b6470;
+    --line:   #d8dce1;
+    --safety: #ff5a1f;
+    --rent:   #8a5a00;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--paper); color: var(--ink);
+    line-height: 1.45;
+    max-width: 640px; margin: 0 auto;
+    padding: 16px 16px 48px;
+  }
+
+  header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: 3px solid var(--ink);
+    padding-bottom: 10px; margin-bottom: 20px;
+  }
+  .mark { font-weight: 800; letter-spacing: .04em; font-size: 14px; text-transform: uppercase; }
+  header a { color: var(--safety); font-weight: 700; font-size: 14px; text-decoration: none; }
+  header a:hover { text-decoration: underline; }
+
+  h2 {
+    font-size: 12px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--steel);
+    margin: 26px 0 10px;
+  }
+
+  /* ---- Location groups -------------------------------------------- */
+  .group { border: 3px solid var(--ink); margin-bottom: 14px; }
+  .group-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 10px 12px; border-bottom: 2px solid var(--ink);
+  }
+  .group-head .loc {
+    font-size: 18px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: -0.01em;
+  }
+  .group-head .count { color: var(--steel); font-size: 13px; font-weight: 700; }
+
+  .asset-row {
+    display: flex; align-items: center; gap: 10px;
+    min-height: 52px;              /* gloved-thumb tap target */
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
+    text-decoration: none; color: var(--ink);
+  }
+  .asset-row:last-child { border-bottom: none; }
+  .asset-row:active { background: #f3f4f6; }
+  .asset-row .tag {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-weight: 700; font-size: 15px;
+    border: 2px solid var(--ink); padding: 0 6px;
+    white-space: nowrap;
+  }
+  .asset-row .name { flex: 1; font-size: 15px; }
+  .asset-row .rent {
+    font-size: 10px; font-weight: 700; letter-spacing: .08em;
+    color: var(--rent); border: 1.5px solid currentColor; padding: 1px 5px;
+    white-space: nowrap;
+  }
+
+  /* ---- Recently moved --------------------------------------------- */
+  .mv {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 14px;
+  }
+  .mv .tag {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-weight: 700;
+  }
+  .mv .route { color: var(--ink); }
+  .mv .who { color: var(--steel); font-size: 13px; margin-top: 1px; }
+
+  .empty { color: var(--steel); padding: 14px 12px; font-size: 14px; }
+  .error { margin-top: 14px; padding: 14px; background: #fdecea; color: #a1160a; font-weight: 600; }
+  .loading { color: var(--steel); padding: 40px 0; text-align: center; }
+</style>
+</head>
+<body>
+
+<div x-data="dashboard()" x-init="load()">
+
+  <header>
+    <span class="mark">TrenchNote</span>
+    <a href="labels.html">Print labels →</a>
+  </header>
+
+  <template x-if="state === 'loading'">
+    <p class="loading">Loading…</p>
+  </template>
+
+  <template x-if="state === 'error'">
+    <div class="error" x-text="errorMsg"></div>
+  </template>
+
+  <template x-if="state === 'ready'">
+    <main>
+      <h2>Assets by location</h2>
+
+      <template x-for="g in groups" :key="g.id">
+        <section class="group">
+          <div class="group-head">
+            <span class="loc" x-text="g.name"></span>
+            <span class="count" x-text="g.assets.length + (g.assets.length === 1 ? ' asset' : ' assets')"></span>
+          </div>
+          <!-- Each row is a link to the same page a QR scan opens -->
+          <template x-for="a in g.assets" :key="a.id">
+            <a class="asset-row" :href="'asset.html?code=' + encodeURIComponent(a.tag_code)">
+              <span class="tag" x-text="a.tag_code"></span>
+              <span class="name" x-text="a.expand?.item?.name || 'Unknown item'"></span>
+              <span class="rent" x-show="a.ownership === 'rented'"
+                    x-text="'RENTED' + (a.vendor ? ' — ' + a.vendor : '')"></span>
+            </a>
+          </template>
+          <div class="empty" x-show="!g.assets.length">Nothing here right now.</div>
+        </section>
+      </template>
+
+      <h2>Recently moved</h2>
+      <template x-for="m in movements" :key="m.id">
+        <div class="mv">
+          <div class="route">
+            <span class="tag" x-text="m.expand?.asset?.tag_code || '?'"></span>
+            <span x-text="m.expand?.asset?.expand?.item?.name || ''"></span>
+            — <span x-text="m.expand?.from_location?.name || 'outside system'"></span>
+            → <strong x-text="m.expand?.to_location?.name || '?'"></strong>
+          </div>
+          <div class="who">
+            <span x-text="m.moved_by || 'unspecified'"></span> ·
+            <span x-text="ago(m.created)"></span>
+          </div>
+        </div>
+      </template>
+      <div class="empty" x-show="!movements.length">No movements logged yet.</div>
+    </main>
+  </template>
+
+</div>
+
+<script>
+function dashboard() {
+  const PB = window.location.origin;   // PocketBase serves this page — same origin
+
+  return {
+    state: 'loading',
+    errorMsg: '',
+    locations: [],
+    assets: [],
+    movements: [],
+
+    // Locations in name order, each with its assets attached; a synthetic
+    // "Unassigned" bucket catches assets with no current_location. Groups
+    // with assets sort before empty ones so the useful info is on top.
+    get groups() {
+      const byLoc = {};
+      for (const a of this.assets) {
+        const key = a.current_location || 'none';
+        (byLoc[key] = byLoc[key] || []).push(a);
+      }
+      const groups = this.locations.map(l => ({
+        id: l.id, name: l.name, assets: byLoc[l.id] || []
+      }));
+      if (byLoc['none']) {
+        groups.push({ id: 'none', name: 'Unassigned', assets: byLoc['none'] });
+      }
+      return groups.sort((x, y) => y.assets.length - x.assets.length);
+    },
+
+    // "3d ago" / "5h ago" / "just now" — cheap and good enough
+    ago(dateStr) {
+      const mins = Math.floor((Date.now() - new Date(dateStr)) / 60000);
+      if (mins < 1) return 'just now';
+      if (mins < 60) return mins + 'm ago';
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return hrs + 'h ago';
+      return Math.floor(hrs / 24) + 'd ago';
+    },
+
+    async load() {
+      try {
+        // Three reads, fired in parallel to keep slow connections snappy.
+        const [locRes, assetRes, mvRes] = await Promise.all([
+          fetch(`${PB}/api/collections/locations/records?sort=name&perPage=200`),
+          fetch(`${PB}/api/collections/assets/records?expand=item&sort=tag_code&perPage=500`),
+          // Nested expand: "asset.item" resolves the movement's asset AND
+          // that asset's item in one request.
+          fetch(`${PB}/api/collections/movements/records?sort=-created&perPage=15&expand=asset.item,from_location,to_location`),
+        ]);
+        if (!locRes.ok || !assetRes.ok || !mvRes.ok) {
+          throw new Error('API error ' + [locRes, assetRes, mvRes].find(r => !r.ok).status);
+        }
+        this.locations = (await locRes.json()).items;
+        this.assets = (await assetRes.json()).items;
+        this.movements = (await mvRes.json()).items;
+        this.state = 'ready';
+      } catch (err) {
+        this.state = 'error';
+        this.errorMsg = 'Could not reach the server. Is PocketBase running? (' + err.message + ')';
+      }
+    }
+  };
+}
+</script>
+</body>
+</html>
