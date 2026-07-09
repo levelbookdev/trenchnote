@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrenchNote — Print Labels</title>
+
+<!--
+  TrenchNote label sheet. Pulls every asset from PocketBase and renders a
+  printable grid of QR labels. Each QR encodes:
+
+      {Base URL}/asset.html?code={tag_code}
+
+  IMPORTANT: before printing labels for field use, set the Base URL box to
+  the address phones will actually reach — your LAN IP for testing
+  (http://192.168.x.x:8090) or your real domain later. A QR pointing at
+  127.0.0.1 only works on the machine it was printed from.
+
+  qrcodejs is vendored locally (see vendor/README.md) — no CDN.
+-->
+<script src="vendor/qrcode.min.js"></script>
+
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: #14161a; background: #fff;
+    padding: 20px; max-width: 900px; margin: 0 auto;
+  }
+  header { border-bottom: 3px solid #14161a; padding-bottom: 10px; margin-bottom: 18px; }
+  h1 { font-size: 18px; text-transform: uppercase; letter-spacing: .05em; }
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+  .controls input {
+    flex: 1; min-width: 260px; font: inherit; font-size: 15px;
+    padding: 10px; border: 2px solid #14161a;
+  }
+  .controls button {
+    font: inherit; font-weight: 800; font-size: 15px;
+    text-transform: uppercase; letter-spacing: .04em;
+    padding: 10px 22px; border: none; cursor: pointer;
+    background: #ff5a1f; color: #fff;
+  }
+  .hint { color: #5b6470; font-size: 13px; margin-bottom: 16px; }
+
+  .sheet {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
+  }
+  .label {
+    border: 2px solid #14161a;
+    padding: 12px; text-align: center;
+    break-inside: avoid;   /* don't split a label across printed pages */
+  }
+  .label .qr { display: flex; justify-content: center; margin-bottom: 8px; }
+  .label .code {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-weight: 800; font-size: 22px; letter-spacing: .06em;
+  }
+  .label .name { font-size: 13px; color: #5b6470; margin-top: 2px; }
+  .status { color: #5b6470; padding: 30px 0; }
+  .error { padding: 14px; background: #fdecea; color: #a1160a; font-weight: 600; }
+
+  @media print {
+    .controls, .hint, header { display: none; }
+    body { padding: 0; }
+    .sheet { gap: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<header><h1>TrenchNote — Asset Labels</h1></header>
+
+<div class="controls">
+  <input id="baseUrl" type="text" placeholder="Base URL (what phones will reach)">
+  <button onclick="render()">Generate</button>
+  <button onclick="window.print()">Print</button>
+</div>
+<p class="hint">
+  Set the Base URL to the address phones can actually reach (LAN IP for
+  testing, real domain later), then Generate → Print. The human-readable code
+  is printed under each QR as the mud-proof fallback.
+</p>
+
+<div id="out" class="status">Loading assets…</div>
+
+<script>
+  const input = document.getElementById('baseUrl');
+  input.value = window.location.origin;   // sensible default; edit before printing
+  let assets = [];
+
+  async function loadAssets() {
+    const out = document.getElementById('out');
+    try {
+      // expand=item pulls each asset's catalog record along, so the label
+      // can print the item name under the tag code without extra requests.
+      const res = await fetch(
+        window.location.origin +
+        '/api/collections/assets/records?expand=item&sort=tag_code&perPage=500'
+      );
+      if (!res.ok) throw new Error('API error ' + res.status);
+      assets = (await res.json()).items;
+      if (!assets.length) {
+        out.className = 'status';
+        out.textContent = 'No assets yet — add some in the PocketBase admin UI, then reload.';
+        return;
+      }
+      render();
+    } catch (err) {
+      out.className = 'error';
+      out.textContent = 'Could not load assets: ' + err.message;
+    }
+  }
+
+  function render() {
+    const base = input.value.replace(/\/+$/, '');
+    const out = document.getElementById('out');
+    out.className = 'sheet';
+    out.innerHTML = '';
+    for (const a of assets) {
+      const div = document.createElement('div');
+      div.className = 'label';
+      div.innerHTML =
+        '<div class="qr"></div>' +
+        '<div class="code"></div>' +
+        '<div class="name"></div>';
+      div.querySelector('.code').textContent = a.tag_code;
+      div.querySelector('.name').textContent = (a.expand && a.expand.item) ? a.expand.item.name : '';
+      out.appendChild(div);
+      new QRCode(div.querySelector('.qr'), {
+        text: base + '/asset.html?code=' + encodeURIComponent(a.tag_code),
+        width: 140, height: 140,
+        // Level H = ~30% of the code can be damaged and still scan.
+        // Short tag codes keep density low, so H costs us nothing.
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+  }
+
+  loadAssets();
+</script>
+</body>
+</html>
