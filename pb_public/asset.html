@@ -20,7 +20,10 @@
   the token saved by login.html. No token = redirected to sign in, then
   bounced back here so the scanned QR still lands on the right asset.
 -->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <script src="tn-auth.js"></script>
+<script src="tn-sync.js"></script>
 <script defer src="vendor/alpine.min.js"></script>
 
 <style>
@@ -429,6 +432,20 @@ function assetPage() {
       this.flash = '';
       this.moveError = '';
       if (this.movedBy) localStorage.setItem('tn_name', this.movedBy);
+
+      const dest = this.locations.find(l => l.id === this.moveTo);
+      // The movement body is built once, WITH a pre-generated id, so the
+      // same record can be sent now or replayed from the offline queue —
+      // a duplicate id is rejected by the server, which makes retries
+      // safe (ADR 0008).
+      const movement = {
+        id: TNSync.genId(),
+        asset: this.asset.id,
+        from_location: this.asset.current_location || null,
+        to_location: this.moveTo,
+        moved_by: this.movedBy || 'unspecified'
+      };
+
       try {
         // THE ORDER HERE MATTERS.
         // 1. Write the ledger entry first — movements are the source of
@@ -438,12 +455,7 @@ function assetPage() {
         const mvRes = await TN.fetch(`${PB}/api/collections/movements/records`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            asset: this.asset.id,
-            from_location: this.asset.current_location || null,
-            to_location: this.moveTo,
-            moved_by: this.movedBy || 'unspecified'
-          })
+          body: JSON.stringify(movement)
         });
         if (!mvRes.ok) throw new Error('movement rejected (' + mvRes.status + ')');
 
@@ -455,14 +467,27 @@ function assetPage() {
         });
         if (!upRes.ok) throw new Error('asset update rejected (' + upRes.status + ')');
 
-        const dest = this.locations.find(l => l.id === this.moveTo);
         this.flash = '✓ Moved to ' + (dest ? dest.name : 'new location');
         this.moveTo = '';
         this.showFulfill = true;   // offer to close out open claims below
         await this.load();   // refresh the plate
       } catch (err) {
-        this.moveError = 'Move failed: ' + err.message +
-          '. Check the API rules on "movements" (Create) and "assets" (Update).';
+        if (TNSync.isNetworkError(err)) {
+          // No signal. Queue the whole move (ledger write + cache patch)
+          // and show the phone's view as if it landed — the badge makes
+          // the pending state visible until it syncs.
+          await TNSync.enqueue(movement,
+            { assetId: this.asset.id, toLocation: this.moveTo },
+            this.code + ' → ' + (dest ? dest.name : 'destination'));
+          this.asset.current_location = this.moveTo;
+          if (this.asset.expand) this.asset.expand.current_location = dest;
+          this.daysHere = 0;
+          this.flash = '✓ Saved on this phone — will sync when signal returns';
+          this.moveTo = '';
+        } else {
+          this.moveError = 'Move failed: ' + err.message +
+            '. Check the API rules on "movements" (Create) and "assets" (Update).';
+        }
       } finally {
         this.busy = false;
       }

@@ -32,6 +32,9 @@ trenchnote/
 │   ├── labels.html         # printable QR sheet for all assets
 │   ├── login.html          # sign-in; stores the PocketBase token in localStorage
 │   ├── tn-auth.js          # shared auth helper — TN.fetch, TN.requireLogin
+│   ├── tn-sync.js          # offline write queue (IndexedDB), sync badge, stale banner
+│   ├── sw.js               # service worker: shell cache-first, API network-first
+│   ├── manifest.json       # PWA manifest (+ icon-192/512.png)
 │   └── vendor/             # alpine.min.js, qrcode.min.js — committed on purpose
 ├── scripts/setup.sh        # downloads the right PocketBase binary
 └── docs/                   # you are here
@@ -189,6 +192,38 @@ The frontend plumbing is deliberately small:
 When testing rules by hand, remember the guest behavior: an
 unauthenticated list "succeeding" with `totalItems: 0` is the lockdown
 *working*, not broken. Writes fail loudly (400/403).
+
+## Offline (ADR 0008)
+
+Two files, no dependencies, no build step:
+
+- **`sw.js`** — shell cache-first (versioned; **bump `VERSION` whenever
+  anything in pb_public/ changes**, or phones keep the old shell), API GETs
+  network-first with a cache fallback stamped `X-TN-Cached-At`. `TN.fetch`
+  sees that stamp and shows the "showing saved data from…" banner — cached
+  data never poses as live. Note the two match options and why:
+  `ignoreSearch` (scanned `?code=` URLs must hit the cached page) and
+  `ignoreVary` (the auth token rotates, `Vary: Authorization` would defeat
+  the cache).
+- **`tn-sync.js`** — the offline write queue. Moves made offline land in
+  IndexedDB (raw, ~40 lines, no wrapper lib) and replay FIFO on page load /
+  `online` / badge tap. Every movement body carries a **pre-generated
+  PocketBase id** (`TNSync.genId()` at build-the-body time, online or off),
+  so replaying an already-committed record fails `validation_not_unique`
+  and is treated as success — the queue is idempotent. Sync preflights an
+  `auth-refresh` because PocketBase answers dead tokens AND validation
+  problems with 400 on creates; auth must be checked separately. Failures
+  park visibly (red badge, human-tap discard); nothing is silently dropped.
+
+Conflict stance in one line: the ledger's order is arrival order, the
+cache converges to the latest entry, bulk sums converge under any
+interleaving, and a from/to mismatch in the history is the honest record
+of two crews acting on stale views. Details and rejected alternatives in
+ADR 0008.
+
+Testing offline locally: sign in, load the pages once (warms the caches),
+then kill PocketBase and reload — the app must still open and render, with
+the stale banner up. Queue a move, restart PocketBase, tap the badge.
 
 ## Working on the schema
 

@@ -109,10 +109,26 @@ Open TrenchNote's main page in any browser to see, at a glance:
 3. **Put your name on it.** Nobody's checking up on you — but "who moved
    this?" is the exact question this thing exists to answer.
 
+## No signal? It still works
+
+TrenchNote keeps working with zero bars:
+
+- **Scanning still opens the page**, showing the last info this phone saw —
+  with a banner telling you exactly how old it is. Old info is old; the
+  banner keeps it honest.
+- **Logging a move still works.** It's saved on the phone, and a black
+  **"⏳ to sync"** tag appears in the corner. When you're back in coverage,
+  it sends itself (or tap the tag to send it now). Don't clear the browser
+  or sign out while that tag is showing — that data hasn't reached the
+  office yet.
+- If the tag turns **red**, one of your saved moves couldn't be accepted —
+  tap it, read why, and check with your PM before discarding anything.
+
 ## When something's wrong
 
-- **Page won't load:** you may have no signal, or the server is down. Move
-  the thing anyway — log it when you're back in coverage.
+- **Page won't load and you've never opened TrenchNote on this phone:**
+  offline mode only knows what the phone has seen before. Open it once
+  with signal and you're covered from then on.
 - **"No asset found":** the code was typed wrong, or the sticker belongs to
   gear that isn't in the system yet. Tell your PM.
 - **Wrong email or password:** logins are handed out by your PM — there's

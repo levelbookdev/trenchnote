@@ -1,6 +1,9 @@
 # ADR 0004 — Auth: everything locked, one shared field account per crew
 
 **Status:** accepted · **Date:** 2026-07-09
+**Amended:** 2026-07-09 — offline token behavior (trust the local token
+offline, server re-judges on reconnect) is defined in
+[ADR 0008](0008-offline-first-pwa.md).
 
 ## Context
 

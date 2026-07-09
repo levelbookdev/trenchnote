@@ -24,9 +24,11 @@ and rented gear nobody remembers is still on rent.
 
 ## Design principles
 
-- **Works on a cheap smartphone on a dirt lot with bad reception.** Pages are
-  measured in kilobytes. High contrast for direct sunlight. Tap targets sized
-  for gloved hands.
+- **Works on a cheap smartphone on a dirt lot with bad reception — or none.**
+  Pages are measured in kilobytes, high contrast for direct sunlight, tap
+  targets sized for gloved hands. Offline-first: the app opens with zero
+  connectivity, shows the last-known data (clearly marked as old), and moves
+  logged offline queue on the phone and sync themselves when signal returns.
 - **No build step.** Plain HTML + CSS + Alpine.js, served straight from disk.
   All JavaScript is vendored into the repo — zero CDN or external requests at
   runtime.

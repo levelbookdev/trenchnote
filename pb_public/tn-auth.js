@@ -59,7 +59,24 @@ const TN = {
     }).catch(() => { /* offline/unreachable — the page's own error handling covers it */ });
   },
 
-  signOut() {
+  async signOut() {
+    // Unsynced field data can't sync while signed out — make sure the
+    // person knows it's parked, not lost.
+    if (window.TNSync) {
+      const waiting = (await TNSync.qAll()).length;
+      if (waiting && !confirm(
+        waiting + ' unsynced move(s) are saved on this phone. They stay ' +
+        'saved, but cannot sync until someone signs in again. Sign out anyway?')) {
+        return;
+      }
+    }
+    // Cached inventory data shouldn't outlive the session on a shared
+    // phone. The shell cache (pages, no data) stays.
+    if (window.caches) {
+      for (const key of await caches.keys()) {
+        if (key.startsWith('tn-api-')) await caches.delete(key);
+      }
+    }
     localStorage.removeItem('tn_token');
     localStorage.removeItem('tn_user');
     location.href = 'login.html';
@@ -71,6 +88,10 @@ const TN = {
   async fetch(url, opts = {}) {
     opts.headers = Object.assign({ 'Authorization': this.token() }, opts.headers);
     const res = await fetch(url, opts);
+    // The service worker stamps X-TN-Cached-At on responses it serves
+    // from cache (= the network is gone). Tell the user the data is old.
+    const cachedAt = res.headers.get('X-TN-Cached-At');
+    if (cachedAt && window.TNSync) TNSync.showStale(cachedAt);
     if (res.status === 401) {
       localStorage.removeItem('tn_token');
       localStorage.removeItem('tn_user');

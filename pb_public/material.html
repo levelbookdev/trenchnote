@@ -26,7 +26,10 @@
   gone), the alternative to consuming is a location like "Installed —
   Northside" and a normal transfer.
 -->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <script src="tn-auth.js"></script>
+<script src="tn-sync.js"></script>
 <script defer src="vendor/alpine.min.js"></script>
 
 <style>
@@ -322,36 +325,61 @@ function materialPage() {
       this.flash = '';
       this.moveError = '';
       if (this.movedBy) localStorage.setItem('tn_name', this.movedBy);
+
+      // Built once with a pre-generated id so the identical record can be
+      // sent now or replayed from the offline queue without duplicating
+      // (ADR 0008). "@consumed" is a UI sentinel — the ledger just gets
+      // an empty to_location, which is what "consumed" means server-side.
+      const consuming = this.toLoc === '@consumed';
+      const dest = this.locations.find(l => l.id === this.toLoc);
+      const movement = {
+        id: TNSync.genId(),
+        item: this.id,
+        quantity: this.qty,
+        from_location: this.fromLoc || null,
+        to_location: consuming ? null : this.toLoc,
+        moved_by: this.movedBy || 'unspecified',
+        note: this.note || ''
+      };
+      const doneMsg = consuming
+        ? '✓ ' + this.qty + ' used'
+        : '✓ ' + this.qty + ' → ' + (dest ? dest.name : 'destination');
+
       try {
         // One POST, no cache to update afterwards: bulk stock is always
         // derived from the ledger, so the ledger entry IS the whole move.
-        // "@consumed" is a UI sentinel — the ledger just gets an empty
-        // to_location, which is what "consumed" means server-side.
-        const consuming = this.toLoc === '@consumed';
         const res = await TN.fetch(`${PB}/api/collections/movements/records`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            item: this.id,
-            quantity: this.qty,
-            from_location: this.fromLoc || null,
-            to_location: consuming ? null : this.toLoc,
-            moved_by: this.movedBy || 'unspecified',
-            note: this.note || ''
-          })
+          body: JSON.stringify(movement)
         });
         if (!res.ok) throw new Error('movement rejected (' + res.status + ')');
 
-        const dest = this.locations.find(l => l.id === this.toLoc);
-        this.flash = consuming
-          ? '✓ ' + this.qty + ' used'
-          : '✓ ' + this.qty + ' → ' + (dest ? dest.name : 'destination');
+        this.flash = doneMsg;
         this.qty = null;
         this.toLoc = '';
         this.note = '';
         await this.load();   // re-derive the stock plate
       } catch (err) {
-        this.moveError = 'Move failed: ' + err.message;
+        if (TNSync.isNetworkError(err)) {
+          // No signal: queue it, and fold the movement into the local
+          // list so the stock plate re-derives optimistically — sums are
+          // order-independent, so the math is the same one the server
+          // will reach after sync.
+          await TNSync.enqueue(movement, null,
+            this.qty + '× ' + this.item.name + (consuming ? ' used' : ' → ' + (dest ? dest.name : '?')));
+          this.movements.unshift({
+            to_location: movement.to_location || '',
+            from_location: movement.from_location || '',
+            quantity: movement.quantity
+          });
+          this.flash = doneMsg + ' — saved on this phone, will sync';
+          this.qty = null;
+          this.toLoc = '';
+          this.note = '';
+        } else {
+          this.moveError = 'Move failed: ' + err.message;
+        }
       } finally {
         this.busy = false;
       }

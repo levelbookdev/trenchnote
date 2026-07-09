@@ -8,9 +8,10 @@ A minimalist, low-bandwidth, self-hostable web app for tracking physical
 equipment and materials across heavy civil and water/wastewater construction
 job sites. Built by a project engineer at a water/wastewater general
 contractor. Designed to run on low-bandwidth devices — old Androids, company
-iPads — in dirt lots with poor cell reception. (True offline capability is a
-design goal, not yet built: today the pages need a connection; they're just
-tiny about it.)
+iPads — in dirt lots with poor cell reception. Offline-first as of ADR 0008:
+the app shell and last-known data are cached (staleness always shown, never
+hidden), and moves logged offline queue in IndexedDB and sync when signal
+returns.
 
 It is a **surgical field-logistics ledger** — not an ERP, not a Procore
 replacement, not accounting software. It answers three questions well and
@@ -134,6 +135,9 @@ trenchnote/
 │   ├── labels.html        # print QR labels for all assets
 │   ├── login.html         # sign in; token to localStorage
 │   ├── tn-auth.js         # shared auth helper (TN.fetch / TN.requireLogin)
+│   ├── tn-sync.js         # offline write queue + sync badge + stale banner
+│   ├── sw.js              # service worker (bump VERSION on any pb_public change!)
+│   ├── manifest.json      # PWA manifest (+ icon-192/512.png)
 │   └── vendor/            # vendored alpine.min.js, qrcode.min.js
 └── scripts/
     └── setup.sh           # download the right PocketBase binary for the OS
@@ -157,6 +161,11 @@ Ignored: the PocketBase binary (`pocketbase` / `pocketbase.exe`) and `pb_data/`
   backend by reading the code.
 - Design tokens: one accent (safety orange) spent only on the primary action;
   system fonts for zero webfont bytes; monospace for tag codes.
+- **Any change to a file in `pb_public/` requires bumping `VERSION` in
+  `sw.js`** — the service worker serves the shell cache-first, so without the
+  bump, phones keep running the old code. Movements are created with
+  pre-generated ids (`TNSync.genId()`) so offline replays are idempotent —
+  keep that pattern in any new write path (ADR 0008).
 
 ## Security posture
 
