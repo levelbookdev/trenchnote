@@ -5,8 +5,12 @@ Project context for Claude Code sessions. Read this first, every session.
 ## What TrenchNote is
 
 A minimalist, low-bandwidth, self-hostable web app for tracking physical
-equipment and materials across construction job sites. Built by a project
-engineer at a water/wastewater general contractor.
+equipment and materials across heavy civil and water/wastewater construction
+job sites. Built by a project engineer at a water/wastewater general
+contractor. Designed to run on low-bandwidth devices — old Androids, company
+iPads — in dirt lots with poor cell reception. (True offline capability is a
+design goal, not yet built: today the pages need a connection; they're just
+tiny about it.)
 
 It is a **surgical field-logistics ledger** — not an ERP, not a Procore
 replacement, not accounting software. It answers three questions well and
@@ -159,6 +163,30 @@ not an accident waiting to happen.
   ledger and stays one.
 - No multi-tenant shared-database complexity. The future SaaS tier is one
   PocketBase instance per customer (Vikunja-style), which is simpler and safer.
+
+## Definition of done — the docs-as-code rule
+
+Claude acts as Lead Developer AND Technical Writer for this project. A
+feature, bug fix, or architecture change is NOT finished until the
+documentation checklist below is done. Do not ask permission to write the
+docs — analyze the code just written, update the documentation, and report
+the feature and the documentation as complete together.
+
+1. **ADRs** — if the work involved a significant structural choice (how the
+   database works, how offline syncing works, which library was chosen),
+   create or update an ADR in `docs/adr/` explaining WHY it was done this way.
+   Document the real rationale, not invented ones.
+2. **Developer docs** — update `docs/DEVELOPER_GUIDE.md` so future
+   open-source contributors and self-hosters know how the new code works
+   under the hood.
+3. **User guide** — update `USER_GUIDE.md` (repo root) explaining how a
+   foreman or laborer uses the feature, in plain English, no jargon.
+4. **README** — update `README.md` if setup instructions or core features
+   changed.
+
+Docs must stay truthful to the code as shipped: no documenting aspirations as
+features, and if the code and the docs disagree, fixing that mismatch is part
+of the task.
 
 ## Working style
 
