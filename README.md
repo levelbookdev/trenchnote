@@ -103,6 +103,9 @@ before printing, so the QR codes point somewhere phones can actually reach.
   the hood: data model, the ledger invariants, migrations, frontend patterns.
 - **[docs/DEPLOY.md](docs/DEPLOY.md)** — running it for real: trailer
   Pi or VPS, systemd, HTTPS with Caddy, and backups you've actually tested.
+- **[docs/API.md](docs/API.md)** — the public API contract (v1): what
+  integrations and third-party tools may build on, and the stability
+  promise that comes with it.
 - **[docs/adr/](docs/adr)** — architecture decision records: why a single
   binary + static pages, and why an append-only ledger.
 
