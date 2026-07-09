@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrenchNote — Asset</title>
+
+<!--
+  TrenchNote asset page — the page a QR label opens.
+  The QR encodes:  {baseUrl}/asset.html?code=A001
+
+  PocketBase serves this file from pb_public/ at the same origin as its API,
+  so the page talks to window.location.origin — no configuration, and the
+  same file works on localhost, a LAN IP, or a real domain.
+
+  Alpine.js is vendored locally (see vendor/README.md) — zero external
+  requests at runtime.
+-->
+<script defer src="vendor/alpine.min.js"></script>
+
+<style>
+  /* ---- Field-utility design tokens -------------------------------
+     High contrast for direct sunlight. System fonts = zero webfont
+     bytes. Tap targets sized for gloved hands. One accent: safety
+     orange, spent only on the primary action. */
+  :root {
+    --ink:    #14161a;   /* near-black text */
+    --paper:  #ffffff;
+    --steel:  #5b6470;   /* secondary text */
+    --line:   #d8dce1;
+    --safety: #ff5a1f;   /* the one accent */
+    --go:     #1b8a4b;   /* confirmation */
+    --rent:   #8a5a00;   /* rented badge */
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.45;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 16px 16px 48px;
+  }
+
+  /* Top bar: app mark + tag code, like a stamped equipment plate */
+  header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: 3px solid var(--ink);
+    padding-bottom: 10px; margin-bottom: 20px;
+  }
+  .mark { font-weight: 800; letter-spacing: .04em; font-size: 14px; text-transform: uppercase; }
+  .tag  {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-weight: 700; font-size: 20px;
+    border: 2px solid var(--ink); padding: 1px 8px;
+  }
+
+  h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
+  .meta { color: var(--steel); font-size: 14px; margin-top: 2px; }
+
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .08em;
+    padding: 3px 8px; margin-top: 8px;
+    border: 1.5px solid currentColor;
+  }
+  .badge.rented { color: var(--rent); }
+  .badge.owned  { color: var(--steel); }
+
+  img.photo {
+    width: 100%; margin-top: 14px;
+    border: 1px solid var(--line);
+  }
+
+  /* ---- Signature element: the location plate ---------------------
+     The answer to "where is it" reads like a stenciled gate sign. */
+  .plate {
+    margin-top: 22px;
+    border: 3px solid var(--ink);
+    padding: 16px;
+  }
+  .plate .eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--steel);
+  }
+  .plate .loc {
+    font-size: 34px; font-weight: 800; letter-spacing: -0.01em;
+    text-transform: uppercase; line-height: 1.1; margin-top: 4px;
+  }
+  .plate .dur { margin-top: 8px; font-size: 14px; color: var(--steel); }
+  .plate .dur strong { color: var(--ink); }
+
+  /* ---- Move form -------------------------------------------------- */
+  .move { margin-top: 26px; }
+  .move h2 {
+    font-size: 12px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--steel); margin-bottom: 10px;
+  }
+  select, input[type=text] {
+    width: 100%; min-height: 56px;
+    font: inherit; font-size: 17px;
+    padding: 12px; margin-bottom: 10px;
+    border: 2px solid var(--ink); border-radius: 0;
+    background: var(--paper); color: var(--ink);
+  }
+  button.go {
+    width: 100%; min-height: 60px;
+    font: inherit; font-size: 18px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .05em;
+    background: var(--safety); color: #fff;
+    border: none; cursor: pointer;
+  }
+  button.go:disabled { background: var(--line); color: var(--steel); cursor: default; }
+  button.go:focus-visible, select:focus-visible, input:focus-visible {
+    outline: 3px solid var(--safety); outline-offset: 2px;
+  }
+
+  .flash {
+    margin-top: 14px; padding: 14px;
+    font-weight: 700; color: #fff; background: var(--go);
+  }
+  .error { margin-top: 14px; padding: 14px; background: #fdecea; color: #a1160a; font-weight: 600; }
+  .loading { color: var(--steel); padding: 40px 0; text-align: center; }
+</style>
+</head>
+<body>
+
+<div x-data="assetPage()" x-init="load()">
+
+  <header>
+    <span class="mark">TrenchNote</span>
+    <span class="tag" x-text="code || '—'"></span>
+  </header>
+
+  <template x-if="state === 'loading'">
+    <p class="loading">Loading asset…</p>
+  </template>
+
+  <template x-if="state === 'error'">
+    <div class="error" x-text="errorMsg"></div>
+  </template>
+
+  <template x-if="state === 'ready'">
+    <main>
+      <h1 x-text="asset.expand?.item?.name || 'Unknown item'"></h1>
+      <p class="meta" x-show="asset.serial_number">
+        Serial: <span x-text="asset.serial_number"></span>
+      </p>
+      <span class="badge"
+            :class="asset.ownership === 'rented' ? 'rented' : 'owned'"
+            x-text="asset.ownership === 'rented'
+                    ? ('RENTED — ' + (asset.vendor || 'vendor n/a'))
+                    : 'COMPANY OWNED'"></span>
+
+      <template x-if="photoUrl">
+        <img class="photo" :src="photoUrl" alt="Asset photo">
+      </template>
+
+      <!-- The location plate -->
+      <div class="plate">
+        <div class="eyebrow">Current location</div>
+        <div class="loc" x-text="asset.expand?.current_location?.name || 'UNASSIGNED'"></div>
+        <div class="dur" x-show="daysHere !== null">
+          Here for <strong x-text="daysHere === 0 ? 'less than a day' : daysHere + (daysHere === 1 ? ' day' : ' days')"></strong>
+        </div>
+      </div>
+
+      <!-- Move action -->
+      <div class="move">
+        <h2>Move this asset</h2>
+        <select x-model="moveTo" aria-label="Destination">
+          <option value="" disabled selected>Choose destination…</option>
+          <template x-for="loc in destinations" :key="loc.id">
+            <option :value="loc.id" x-text="loc.name"></option>
+          </template>
+        </select>
+        <input type="text" x-model="movedBy" placeholder="Your name (optional)">
+        <button class="go" :disabled="!moveTo || busy" @click="move()"
+                x-text="busy ? 'Saving…' : 'Move here'"></button>
+
+        <div class="flash" x-show="flash" x-text="flash"></div>
+        <div class="error" x-show="moveError" x-text="moveError"></div>
+      </div>
+    </main>
+  </template>
+
+</div>
+
+<script>
+function assetPage() {
+  // PocketBase serves this page from pb_public/, so the API lives at
+  // the same origin. This is why no base-URL config is needed —
+  // it works on localhost AND when your phone hits the LAN IP.
+  const PB = window.location.origin;
+
+  return {
+    code: new URLSearchParams(location.search).get('code') || '',
+    state: 'loading',
+    errorMsg: '',
+    asset: null,
+    locations: [],
+    daysHere: null,
+    moveTo: '',
+    // Remember the mover's name on this phone so crews type it once.
+    movedBy: localStorage.getItem('tn_name') || '',
+    busy: false,
+    flash: '',
+    moveError: '',
+
+    // Destinations = every location except the current one
+    get destinations() {
+      return this.locations.filter(l => l.id !== this.asset?.current_location);
+    },
+
+    get photoUrl() {
+      const item = this.asset?.expand?.item;
+      if (!item || !item.photo) return null;
+      // PocketBase file URL pattern: /api/files/{collection}/{recordId}/{filename}
+      return `${PB}/api/files/items/${item.id}/${item.photo}`;
+    },
+
+    async load() {
+      if (!this.code) {
+        this.state = 'error';
+        this.errorMsg = 'No tag code in the URL. Open this page as asset.html?code=A001';
+        return;
+      }
+      try {
+        // 1. Find the asset by its tag code. `filter` is PocketBase's query
+        //    syntax; `expand=item,current_location` pulls the related item
+        //    and location records in the same request (they arrive under
+        //    asset.expand.*), saving two round-trips on a slow connection.
+        const filter = encodeURIComponent(`tag_code='${this.code.replace(/'/g, "\\'")}'`);
+        const res = await fetch(
+          `${PB}/api/collections/assets/records?filter=(${filter})&expand=item,current_location&perPage=1`
+        );
+        if (!res.ok) throw new Error(`API error ${res.status}`);
+        const data = await res.json();
+        if (!data.items.length) {
+          this.state = 'error';
+          this.errorMsg = `No asset found with tag "${this.code}". Check the code, or add it in the admin UI.`;
+          return;
+        }
+        this.asset = data.items[0];
+
+        // 2. Load all locations for the destination dropdown.
+        const locRes = await fetch(`${PB}/api/collections/locations/records?sort=name&perPage=200`);
+        this.locations = (await locRes.json()).items;
+
+        // 3. "How long has it been here" comes from the ledger: time since
+        //    this asset's latest movement (sort=-created, take one). Falls
+        //    back to the asset record's created date if it has never moved.
+        const mvFilter = encodeURIComponent(`asset='${this.asset.id}'`);
+        const mvRes = await fetch(
+          `${PB}/api/collections/movements/records?filter=(${mvFilter})&sort=-created&perPage=1`
+        );
+        const mv = (await mvRes.json()).items[0];
+        const since = new Date(mv ? mv.created : this.asset.created);
+        this.daysHere = Math.floor((Date.now() - since) / 86400000);
+
+        this.state = 'ready';
+      } catch (err) {
+        this.state = 'error';
+        this.errorMsg = 'Could not reach the server. Is PocketBase running? (' + err.message + ')';
+      }
+    },
+
+    async move() {
+      this.busy = true;
+      this.flash = '';
+      this.moveError = '';
+      if (this.movedBy) localStorage.setItem('tn_name', this.movedBy);
+      try {
+        // THE ORDER HERE MATTERS.
+        // 1. Write the ledger entry first — movements are the source of
+        //    truth. If the second request fails we have a true ledger and a
+        //    stale cache (visible, fixable); the other order could lose the
+        //    move entirely.
+        const mvRes = await fetch(`${PB}/api/collections/movements/records`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            asset: this.asset.id,
+            from_location: this.asset.current_location || null,
+            to_location: this.moveTo,
+            moved_by: this.movedBy || 'unspecified'
+          })
+        });
+        if (!mvRes.ok) throw new Error('movement rejected (' + mvRes.status + ')');
+
+        // 2. Then update the asset's cached current_location.
+        const upRes = await fetch(`${PB}/api/collections/assets/records/${this.asset.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ current_location: this.moveTo })
+        });
+        if (!upRes.ok) throw new Error('asset update rejected (' + upRes.status + ')');
+
+        const dest = this.locations.find(l => l.id === this.moveTo);
+        this.flash = '✓ Moved to ' + (dest ? dest.name : 'new location');
+        this.moveTo = '';
+        await this.load();   // refresh the plate
+      } catch (err) {
+        this.moveError = 'Move failed: ' + err.message +
+          '. Check the API rules on "movements" (Create) and "assets" (Update).';
+      } finally {
+        this.busy = false;
+      }
+    }
+  };
+}
+</script>
+</body>
+</html>

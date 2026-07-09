@@ -11,3 +11,6 @@ pb_data/
 # OS noise
 .DS_Store
 Thumbs.db
+
+# Local editor/agent tooling config
+.claude/
