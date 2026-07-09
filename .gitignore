@@ -1,0 +1,13 @@
+# The PocketBase binary is downloaded per-machine by scripts/setup.sh —
+# never commit it. (Different OS/arch per machine, and it's ~40 MB.)
+pocketbase
+pocketbase.exe
+pocketbase_*.zip
+
+# Live database, uploaded files, and logs. This is the self-hoster's data,
+# not source code. The schema lives in pb_migrations/ (which IS committed).
+pb_data/
+
+# OS noise
+.DS_Store
+Thumbs.db
