@@ -169,6 +169,27 @@
         </div>
       </template>
 
+      <!-- Who has claimed what, soonest first -->
+      <template x-if="upcomingReservations.length">
+        <div>
+          <h2>Spoken for</h2>
+          <template x-for="r in upcomingReservations" :key="r.id">
+            <div class="mv">
+              <div class="route">
+                <span class="tag" x-text="r.expand?.asset?.tag_code || '?'"></span>
+                <span x-text="r.expand?.asset?.expand?.item?.name || ''"></span>
+                — needed by <strong x-text="fmtDate(r.needed_by)"></strong>
+              </div>
+              <div class="who">
+                <span x-text="r.requested_by || 'unspecified'"></span><span
+                  x-show="r.expected_release"
+                  x-text="' · through ' + fmtDate(r.expected_release)"></span>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+
       <h2>Recently moved</h2>
       <template x-for="m in movements" :key="m.id">
         <div class="mv">
@@ -203,6 +224,7 @@ function dashboard() {
     movements: [],
     bulkItems: [],
     deliveries: [],
+    reservations: [],
 
     // Locations in name order, each with its assets attached; a synthetic
     // "Unassigned" bucket catches assets with no current_location. Groups
@@ -236,6 +258,24 @@ function dashboard() {
         .sort((a, b) => b.total - a.total);
     },
 
+    // Reservations whose window hasn't fully passed, soonest first.
+    // ISO-ish date strings compare correctly as plain strings, so no
+    // Date parsing is needed for the cutoff.
+    get upcomingReservations() {
+      const today = new Date().toISOString().slice(0, 10); // "2026-07-08"
+      return this.reservations.filter(r =>
+        (r.needed_by && r.needed_by >= today) ||
+        (r.expected_release && r.expected_release >= today)
+      ).slice(0, 10);
+    },
+
+    fmtDate(pbDate) {
+      // Dates are stored date-only at UTC midnight ("2026-07-14 00:00:00Z").
+      // Format in UTC too, or western timezones would show the day before.
+      return new Date(pbDate).toLocaleDateString(undefined,
+        { month: 'short', day: 'numeric', timeZone: 'UTC' });
+    },
+
     // "3d ago" / "5h ago" / "just now" — cheap and good enough
     ago(dateStr) {
       const mins = Math.floor((Date.now() - new Date(dateStr)) / 60000);
@@ -249,7 +289,7 @@ function dashboard() {
     async load() {
       try {
         // Three reads, fired in parallel to keep slow connections snappy.
-        const [locRes, assetRes, mvRes, itemRes, delRes] = await Promise.all([
+        const [locRes, assetRes, mvRes, itemRes, delRes, resvRes] = await Promise.all([
           fetch(`${PB}/api/collections/locations/records?sort=name&perPage=200`),
           fetch(`${PB}/api/collections/assets/records?expand=item&sort=tag_code&perPage=500`),
           // Nested expand: "asset.item" resolves the movement's asset AND
@@ -260,14 +300,16 @@ function dashboard() {
           // deliveries = bulk movements that entered from outside the
           // system (no from_location) — all we need for totals
           fetch(`${PB}/api/collections/movements/records?filter=(item!=''%26%26from_location='')&perPage=500`),
+          fetch(`${PB}/api/collections/reservations/records?sort=needed_by&perPage=100&expand=asset.item`),
         ]);
-        const bad = [locRes, assetRes, mvRes, itemRes, delRes].find(r => !r.ok);
+        const bad = [locRes, assetRes, mvRes, itemRes, delRes, resvRes].find(r => !r.ok);
         if (bad) throw new Error('API error ' + bad.status);
         this.locations = (await locRes.json()).items;
         this.assets = (await assetRes.json()).items;
         this.movements = (await mvRes.json()).items;
         this.bulkItems = (await itemRes.json()).items;
         this.deliveries = (await delRes.json()).items;
+        this.reservations = (await resvRes.json()).items;
         this.state = 'ready';
       } catch (err) {
         this.state = 'error';

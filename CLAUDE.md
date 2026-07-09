@@ -83,7 +83,10 @@ reproduce the entire database from the repo.
   either/or shape is enforced server-side by the collection's `createRule`.
   Timestamp is the `created` autodate field.
 - **`reservations`** — `asset` (relation), `requested_by`, `needed_by` (date),
-  `expected_release` (date). Schema now; UI later.
+  `expected_release` (date). UI: reserve + "spoken for" banner on asset.html,
+  upcoming list on the dashboard. Dates are stored date-only at UTC midnight —
+  always format with `timeZone: 'UTC'` or western timezones show the previous
+  day.
 
 ### Model principles
 

@@ -116,6 +116,36 @@
     outline: 3px solid var(--safety); outline-offset: 2px;
   }
 
+  /* ---- Reservations ------------------------------------------------ */
+  .resv-note {
+    margin-top: 14px; padding: 10px 12px;
+    border: 2px solid var(--rent); color: var(--rent);
+    font-size: 14px; font-weight: 600;
+  }
+  .resv-note strong { text-transform: uppercase; letter-spacing: .06em; font-size: 12px; }
+  .resv { margin-top: 26px; }
+  .resv h2 {
+    font-size: 12px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--steel); margin-bottom: 10px;
+  }
+  .resv-toggle {
+    background: none; border: none; cursor: pointer;
+    font: inherit; font-size: 14px; font-weight: 700;
+    color: var(--steel); text-decoration: underline; padding: 0;
+  }
+  input[type=date] {
+    width: 100%; min-height: 56px;
+    font: inherit; font-size: 17px;
+    padding: 12px; margin-bottom: 10px;
+    border: 2px solid var(--ink); border-radius: 0;
+    background: var(--paper); color: var(--ink);
+  }
+  .field-label {
+    display: block; font-size: 12px; font-weight: 700;
+    color: var(--steel); margin-bottom: 4px;
+  }
+  button.go.secondary { background: var(--ink); }
+
   .flash {
     margin-top: 14px; padding: 14px;
     font-weight: 700; color: #fff; background: var(--go);
@@ -166,6 +196,19 @@
         </div>
       </div>
 
+      <!-- Upcoming reservations: the "who has it next" answer. Shown
+           before the move button so a crew grabbing this thing sees the
+           claim before they haul it off. -->
+      <template x-for="r in upcomingReservations" :key="r.id">
+        <div class="resv-note">
+          <strong>Spoken for</strong> —
+          needed by <span x-text="fmtDate(r.needed_by)"></span>
+          · <span x-text="r.requested_by || 'unspecified'"></span>
+          <span x-show="r.expected_release"
+                x-text="' (through ' + fmtDate(r.expected_release) + ')'"></span>
+        </div>
+      </template>
+
       <!-- Move action -->
       <div class="move">
         <h2>Move this asset</h2>
@@ -181,6 +224,30 @@
 
         <div class="flash" x-show="flash" x-text="flash"></div>
         <div class="error" x-show="moveError" x-text="moveError"></div>
+      </div>
+
+      <!-- Reserve: collapsed by default to keep the scan page focused
+           on the two field questions (where is it / move it) -->
+      <div class="resv">
+        <template x-if="!showReserve">
+          <button class="resv-toggle" @click="showReserve = true">
+            Need this later? Reserve it →
+          </button>
+        </template>
+        <template x-if="showReserve">
+          <div>
+            <h2>Reserve this asset</h2>
+            <input type="text" x-model="resvBy" placeholder="Your name">
+            <label class="field-label" for="neededBy">Needed by</label>
+            <input id="neededBy" type="date" x-model="resvNeeded">
+            <label class="field-label" for="expRelease">Expected release (optional)</label>
+            <input id="expRelease" type="date" x-model="resvRelease">
+            <button class="go secondary" :disabled="!resvNeeded || !resvBy || busy"
+                    @click="reserve()" x-text="busy ? 'Saving…' : 'Reserve'"></button>
+            <div class="flash" x-show="resvFlash" x-text="resvFlash"></div>
+            <div class="error" x-show="resvError" x-text="resvError"></div>
+          </div>
+        </template>
       </div>
     </main>
   </template>
@@ -207,10 +274,35 @@ function assetPage() {
     busy: false,
     flash: '',
     moveError: '',
+    reservations: [],
+    showReserve: false,
+    resvBy: localStorage.getItem('tn_name') || '',
+    resvNeeded: '',
+    resvRelease: '',
+    resvFlash: '',
+    resvError: '',
 
     // Destinations = every location except the current one
     get destinations() {
       return this.locations.filter(l => l.id !== this.asset?.current_location);
+    },
+
+    // A reservation still matters if its window hasn't fully passed:
+    // either the needed-by date is ahead, or it's in use until a release
+    // date that's ahead. Fully-past reservations are just history.
+    get upcomingReservations() {
+      const today = new Date().toISOString().slice(0, 10); // "2026-07-08"
+      return this.reservations.filter(r =>
+        (r.needed_by && r.needed_by >= today) ||
+        (r.expected_release && r.expected_release >= today)
+      );
+    },
+
+    fmtDate(pbDate) {
+      // Dates are stored date-only at UTC midnight ("2026-07-14 00:00:00Z").
+      // Format in UTC too, or western timezones would show the day before.
+      return new Date(pbDate).toLocaleDateString(undefined,
+        { month: 'short', day: 'numeric', timeZone: 'UTC' });
     },
 
     get photoUrl() {
@@ -259,6 +351,14 @@ function assetPage() {
         const since = new Date(mv ? mv.created : this.asset.created);
         this.daysHere = Math.floor((Date.now() - since) / 86400000);
 
+        // 4. Reservations on this asset, soonest first. Past ones are
+        //    filtered out client-side (see upcomingReservations).
+        const rFilter = encodeURIComponent(`asset='${this.asset.id}'`);
+        const rRes = await fetch(
+          `${PB}/api/collections/reservations/records?filter=(${rFilter})&sort=needed_by&perPage=20`
+        );
+        this.reservations = (await rRes.json()).items;
+
         this.state = 'ready';
       } catch (err) {
         this.state = 'error';
@@ -304,6 +404,36 @@ function assetPage() {
       } catch (err) {
         this.moveError = 'Move failed: ' + err.message +
           '. Check the API rules on "movements" (Create) and "assets" (Update).';
+      } finally {
+        this.busy = false;
+      }
+    },
+
+    async reserve() {
+      this.busy = true;
+      this.resvFlash = '';
+      this.resvError = '';
+      if (this.resvBy) localStorage.setItem('tn_name', this.resvBy);
+      try {
+        // Date inputs give "2026-07-14"; PocketBase date fields accept
+        // that with a time appended.
+        const res = await fetch(`${PB}/api/collections/reservations/records`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            asset: this.asset.id,
+            requested_by: this.resvBy,
+            needed_by: this.resvNeeded + ' 00:00:00',
+            expected_release: this.resvRelease ? this.resvRelease + ' 00:00:00' : null
+          })
+        });
+        if (!res.ok) throw new Error('reservation rejected (' + res.status + ')');
+        this.resvFlash = '✓ Reserved — needed by ' + this.fmtDate(this.resvNeeded);
+        this.resvNeeded = '';
+        this.resvRelease = '';
+        await this.load();   // show the new claim in the list above
+      } catch (err) {
+        this.resvError = 'Reservation failed: ' + err.message;
       } finally {
         this.busy = false;
       }
