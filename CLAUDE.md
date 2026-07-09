@@ -175,6 +175,9 @@ with auth-required rules from day one.
   ledger and stays one.
 - No multi-tenant shared-database complexity. The future SaaS tier is one
   PocketBase instance per customer (Vikunja-style), which is simpler and safer.
+- No multi-master sync between instances. Deployment is one writable VPS with
+  the Pi as replica/staging (ADR 0006); a truly offline site gets its own
+  standalone install, never a synced peer.
 
 ## Definition of done — the docs-as-code rule
 

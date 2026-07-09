@@ -165,6 +165,80 @@ that an asset page loads with its movement history intact. Ten minutes, and
 now the recovery procedure is something you've done rather than something
 you believe in.
 
+## The reference topology: VPS primary + trailer Pi replica
+
+This is the setup the maintainer runs (ADR 0006). One writable instance,
+one ledger, and a Pi that exists to make the VPS expendable.
+
+```
+phones (cell data) ──HTTPS──▶ VPS: Caddy → PocketBase   (the ONLY writable instance)
+                                   │
+                                   ├─ Litestream ──▶ Pi   (continuous SQLite replication)
+                                   ├─ rsync ───────▶ Pi   (pb_data/storage/ — uploaded photos)
+                                   └─ PocketBase zip backups (second, independent layer)
+```
+
+The Pi is **never a peer**: it doesn't serve crews, and nothing syncs back.
+It holds a warm copy of the ledger and doubles as a staging box. A site
+with no cellular at all gets its own standalone TrenchNote install with its
+own printed labels — not a synced copy of this one.
+
+### Reaching the Pi from the VPS
+
+Litestream *pushes* from the VPS, and a Pi in a trailer or office sits
+behind NAT where the VPS can't see it. The boring fix is
+[Tailscale](https://tailscale.com) on both machines — the Pi gets a stable
+private address (e.g. `100.x.y.z`) reachable from the VPS with zero
+firewall work. (Alternative if you'd rather run nothing extra: skip
+Litestream and have the **Pi pull** the nightly backup zips instead —
+`rsync` over SSH from the Pi to the VPS is outbound-only and NAT doesn't
+care. You lose point-in-time recovery; you keep last-night's ledger.)
+
+### Litestream on the VPS
+
+Litestream streams every SQLite write to the replica — losing the VPS
+costs you seconds of ledger, not a day. Install it on the VPS, then
+`/etc/litestream.yml`:
+
+```yaml
+dbs:
+  - path: /opt/trenchnote/app/pb_data/data.db
+    replicas:
+      - type: sftp
+        host: 100.x.y.z:22          # the Pi's Tailscale address
+        user: trenchnote
+        key-path: /opt/trenchnote/.ssh/id_ed25519
+        path: /home/trenchnote/replica/data.db
+```
+
+Enable its systemd service and check `litestream replicas` reports the Pi.
+`data.db` is the one that matters (the whole ledger); `auxiliary.db` is
+just request logs. Photos live outside SQLite, so add a cron on the VPS:
+
+```sh
+# crontab -e on the VPS — photos to the Pi, hourly
+0 * * * * rsync -a /opt/trenchnote/app/pb_data/storage/ trenchnote@100.x.y.z:/home/trenchnote/replica/storage/
+```
+
+### The restore drill (mandatory, same rule as ever)
+
+On the Pi, prove the replica is real — this is also exactly the procedure
+for standing up a replacement VPS:
+
+```sh
+litestream restore -o /tmp/restore/data.db sftp://trenchnote@100.x.y.z:22/home/trenchnote/replica/data.db
+# drop it into a fresh checkout's pb_data/ + copy storage/, start PocketBase,
+# open an asset page, check the movement history is intact
+```
+
+### Staging on the Pi
+
+Before upgrading PocketBase or applying a new migration on the VPS:
+restore last night's ledger into a scratch `pb_data` on the Pi, run the
+new binary/migration against it (`--dir` pointing at the scratch copy),
+click through the pages. Ten minutes of rehearsal against real data, and
+production upgrades stop being exciting.
+
 ## Quick reference
 
 | Task | Command |
