@@ -118,6 +118,8 @@ Stuff that comes by the hundred doesn't get individual stickers. Instead:
    site — straight from the log, counted every time you open the page.
 3. **Truck arrived from the supplier?** Leave the first dropdown on "New
    delivery", pick where it was unloaded, type how many, hit **LOG MOVE**.
+   See "Taking a delivery" below — there's ten seconds more that will save
+   somebody a five-figure argument next year.
 4. **Hauling 40 supports from the yard to your site?** Pick the yard as
    "From", your site as "To", type 40, log it.
 5. **Installed it or used it up?** Pick where it came from, choose
@@ -137,6 +139,35 @@ If a spot ever shows a **red negative number**, that's the app telling you
 the log and the ground disagree — more left that spot on paper than ever
 arrived. Usually it's a delivery nobody logged. Log it now and the number
 goes right.
+
+## Taking a delivery
+
+Material sits in the yard for a year or more before it gets installed.
+When something turns up missing at startup, whoever has proof wins the
+argument with the vendor — and the proof is made **at the truck**, not
+later.
+
+When you pick "New delivery", the form opens a few extra boxes:
+
+- **Photograph the packing slip before the driver leaves — every time.**
+  Tap the 📷 packing slip button and snap it right on the tailgate. That
+  photo, with its date, is the whole ballgame in a dispute. The app will
+  nag you in orange if you skip it — it'll still let you log the delivery,
+  but do everybody a favor and take the picture.
+- **Vendor and PO number** — who delivered, and the PO it came against.
+  Straight off the slip. Type it once, done.
+- **Anything over, short, or damaged?** Say it in the box, plainly:
+  *"Received 480 of 500 per slip; 2 crates damaged."* Count what actually
+  came off the truck, not what the slip promises.
+- **Damage photos** — crate crushed? Snap it. Up to eight pictures ride
+  along with the delivery.
+
+All of it shows up in the **Delivery history** on the material's page,
+and your PM can print the whole record — photos and all — from the
+**receiving report** link at the bottom to send with the claim.
+
+No signal at the yard? Log it anyway, photos and all — it saves on the
+phone and sends itself when you're back in coverage, same as moves.
 
 ## The dashboard
 

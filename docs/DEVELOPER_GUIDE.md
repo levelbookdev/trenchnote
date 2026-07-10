@@ -117,6 +117,19 @@ field.
 permissive Phase 1** — a ledger you can rewrite is not a ledger. Corrections
 are new movement records.
 
+**Receiving-log fields (ADR 0013):** five optional fields carry dispute
+evidence on deliveries — `vendor_name`, `po_number` (free text a human
+types; TrenchNote never knows what was *ordered*, only what arrived),
+`packing_slip` (one photo), `osd_note` (over/short/damaged, in words),
+and `photos` (up to 8 damage close-ups). The UI offers them only in
+material.html's "New delivery" mode, but the `createRule` deliberately
+does not forbid them on other shapes: an empty optional field hurts
+nothing, and a tighter rule could reject offline-queued moves replayed
+from phones running older code. Because the ledger is append-only, the
+slip photo's `created` timestamp is evidence-grade. `receiving.html`
+renders these per item or per PO as the print-friendly report a PM
+attaches to a vendor dispute email.
+
 ### reservations
 
 `asset`, `requested_by`, `needed_by`, `expected_release`, `note`, `status`

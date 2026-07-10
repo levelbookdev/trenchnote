@@ -68,14 +68,29 @@ const TNSync = {
   // follow it. `label` is what a human sees on the badge/failure list.
   // (Entries with no `kind` are movements — the shape that predates
   // readings; the sync loop treats missing kind as 'movement'.)
-  async enqueue(movement, assetPatch, label) {
+  //
+  // `files` (optional, ADR 0013) carries a delivery's photo evidence:
+  // { packing_slip: File|null, photos: [File, ...] }. Stored as Blobs —
+  // IndexedDB holds files natively — and replayed as multipart, exactly
+  // like reading photos. Entries without files replay as JSON, unchanged.
+  async enqueue(movement, assetPatch, label, files) {
     // Keep a caller-supplied id: if the live POST died AFTER the server
     // committed, replaying under the SAME id is what makes the retry
     // idempotent. Only mint one for callers that didn't.
     movement.id = movement.id || this.genId();
+    // Rebuild `files` as a PLAIN object before it touches IndexedDB.
+    // Callers hand us Alpine component state, and Alpine's reactivity
+    // wraps arrays in Proxies — which structured clone rejects with
+    // DataCloneError, losing the queued delivery. (Bare File objects
+    // pass through reactivity unwrapped, so they're safe as-is.)
+    const plainFiles = files
+      ? { packing_slip: files.packing_slip || null,
+          photos: Array.from(files.photos || []) }
+      : null;
     await this.qAdd({
       movement,
       assetPatch: assetPatch || null,   // { assetId, toLocation } or null for bulk
+      files: plainFiles,
       label,
       queuedAt: new Date().toISOString(),
       status: 'pending',
@@ -151,6 +166,29 @@ const TNSync = {
             for (const k in entry.reading) fd.append(k, entry.reading[k]);
             if (entry.photo) fd.append('photo', entry.photo, 'gauge.jpg');
             res = await fetch(window.location.origin + '/api/collections/readings/records', {
+              method: 'POST',
+              headers: { 'Authorization': localStorage.getItem('tn_token') },
+              body: fd
+            });
+          } else if (entry.files &&
+                     (entry.files.packing_slip || (entry.files.photos || []).length)) {
+            // A movement with photo evidence riding along (a delivery
+            // logged offline — ADR 0013): multipart, like readings.
+            // Null fields are SKIPPED, not appended — FormData would
+            // stringify null into the literal text "null".
+            const fd = new FormData();
+            for (const k in entry.movement) {
+              if (entry.movement[k] !== null && entry.movement[k] !== undefined) {
+                fd.append(k, entry.movement[k]);
+              }
+            }
+            if (entry.files.packing_slip) {
+              fd.append('packing_slip', entry.files.packing_slip, 'slip.jpg');
+            }
+            for (const p of (entry.files.photos || [])) {
+              fd.append('photos', p, 'photo.jpg');
+            }
+            res = await fetch(window.location.origin + '/api/collections/movements/records', {
               method: 'POST',
               headers: { 'Authorization': localStorage.getItem('tn_token') },
               body: fd

@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrenchNote — Receiving report</title>
+
+<!--
+  TrenchNote receiving report (ADR 0013) — the page that gets attached to
+  the vendor dispute email. Print-friendly on purpose: File > Print (or
+  the button) makes a PDF.
+
+  Opened as:
+    receiving.html?item={item_id}   — every delivery of one material
+    receiving.html?po={po_number}   — every delivery against one PO
+    receiving.html                  — picker: choose a material or type a PO
+
+  Everything on it is the movements ledger, filtered to receive-shaped
+  records (to_location set, from_location empty — see migration
+  1783468807) and formatted for paper: dates, quantities, vendor, OS&D
+  notes, then a photo appendix of packing slips and damage shots. Nothing
+  is stored here; a report is just a read of the ledger. What was ORDERED
+  is deliberately absent — TrenchNote only knows what arrived (the PO
+  number is free text a human typed at the truck).
+-->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script src="tn-auth.js"></script>
+<script src="tn-sync.js"></script>
+<script defer src="vendor/alpine.min.js"></script>
+
+<style>
+  /* Same field-utility tokens as the rest of the app — but this page is
+     built to end life as paper, so it leans black-on-white and wider. */
+  :root {
+    --ink:    #14161a;
+    --paper:  #ffffff;
+    --steel:  #5b6470;
+    --line:   #d8dce1;
+    --safety: #ff5a1f;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--paper); color: var(--ink);
+    line-height: 1.45;
+    max-width: 760px; margin: 0 auto;
+    padding: 16px 16px 48px;
+  }
+
+  header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: 3px solid var(--ink);
+    padding-bottom: 10px; margin-bottom: 20px;
+  }
+  .mark { font-weight: 800; letter-spacing: .04em; font-size: 14px; text-transform: uppercase; }
+  header a { color: var(--safety); font-weight: 700; font-size: 14px; text-decoration: none; }
+
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.01em; }
+  .meta { color: var(--steel); font-size: 14px; margin-top: 2px; }
+
+  button.print {
+    min-height: 48px; padding: 0 20px; margin: 16px 0;
+    font: inherit; font-size: 15px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .05em;
+    background: var(--safety); color: #fff; border: none; cursor: pointer;
+  }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 14px; }
+  th {
+    text-align: left; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .08em; color: var(--steel);
+    border-bottom: 2px solid var(--ink); padding: 6px 8px 6px 0;
+  }
+  td { border-bottom: 1px solid var(--line); padding: 8px 8px 8px 0; vertical-align: top; }
+  td.qty { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-weight: 700; }
+  tr.total td { border-top: 2px solid var(--ink); border-bottom: none; font-weight: 800; }
+  .osd { color: #8a5a00; font-weight: 600; }
+
+  /* Photo appendix: one figure per photo, captioned, never split across
+     a page break — a half-printed packing slip proves nothing. */
+  .appendix h2 {
+    font-size: 12px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--steel);
+    margin: 32px 0 4px; border-bottom: 2px solid var(--ink); padding-bottom: 6px;
+  }
+  figure { margin: 20px 0; break-inside: avoid; page-break-inside: avoid; }
+  figure img { max-width: 100%; border: 2px solid var(--ink); display: block; }
+  figcaption { font-size: 13px; color: var(--steel); margin-top: 6px; }
+  figcaption strong { color: var(--ink); }
+
+  /* Picker (no ?item / ?po in the URL) */
+  .picker input {
+    width: 100%; min-height: 56px; font: inherit; font-size: 17px;
+    padding: 12px; margin: 10px 0;
+    border: 2px solid var(--ink); border-radius: 0;
+  }
+  .picker a { display: block; padding: 12px 0; border-bottom: 1px solid var(--line);
+              color: var(--ink); font-weight: 700; text-decoration: none; }
+  .picker a::after { content: " →"; color: var(--safety); }
+
+  .empty { color: var(--steel); padding: 30px 0; }
+  .error { margin-top: 14px; padding: 14px; background: #fdecea; color: #a1160a; font-weight: 600; }
+  .loading { color: var(--steel); padding: 40px 0; text-align: center; }
+
+  /* On paper: report only. No nav, no buttons, no sync badge. */
+  @media print {
+    .noprint, header a, button.print, #tn-sync-badge, #tn-stale-banner { display: none !important; }
+    body { max-width: none; padding: 0; }
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+
+<div x-data="receivingReport()" x-init="load()">
+
+  <header>
+    <span class="mark">TrenchNote</span>
+    <span>
+      <a href="scan.html">📷 Scan</a> &nbsp;·&nbsp; <a href="./">Dashboard</a>
+    </span>
+  </header>
+
+  <template x-if="state === 'loading'">
+    <p class="loading">Building report…</p>
+  </template>
+
+  <template x-if="state === 'error'">
+    <div class="error" x-text="errorMsg"></div>
+  </template>
+
+  <!-- No ?item / ?po: pick what to report on -->
+  <template x-if="state === 'pick'">
+    <main class="picker">
+      <h1>Receiving report</h1>
+      <p class="meta">Every logged delivery of a material — or against one
+        PO — with packing-slip photos and over/short/damaged notes.
+        Print it, attach it to the vendor email.</p>
+
+      <input type="text" x-model="poInput" placeholder="PO number…"
+             @keydown.enter="goPo()">
+      <button class="print" @click="goPo()" :disabled="!poInput.trim()">Report by PO</button>
+
+      <p class="meta" x-show="bulkItems.length">…or pick a material:</p>
+      <template x-for="it in bulkItems" :key="it.id">
+        <a :href="'receiving.html?item=' + it.id" x-text="it.name"></a>
+      </template>
+    </main>
+  </template>
+
+  <template x-if="state === 'ready'">
+    <main>
+      <h1 x-text="title"></h1>
+      <p class="meta">
+        Receiving report · generated <span x-text="new Date().toLocaleString()"></span>
+        · <span x-text="deliveries.length + (deliveries.length === 1 ? ' delivery' : ' deliveries')"></span>
+        · TrenchNote movements ledger (append-only)
+      </p>
+
+      <button class="print noprint" @click="window.print()">🖨 Print / save PDF</button>
+
+      <div class="empty" x-show="!deliveries.length">
+        No logged deliveries match. Deliveries are logged on the material
+        page — first dropdown on “New delivery”.
+      </div>
+
+      <table x-show="deliveries.length">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th x-show="mode === 'po'">Item</th>
+            <th>Qty</th>
+            <th>Received at</th>
+            <th>Vendor</th>
+            <th x-show="mode === 'item'">PO</th>
+            <th>By</th>
+            <th>Over / short / damaged</th>
+            <th>Slip</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="d in deliveries" :key="d.id">
+            <tr>
+              <td x-text="fmtDate(d.created)"></td>
+              <td x-show="mode === 'po'" x-text="d.expand?.item?.name || '?'"></td>
+              <td class="qty" x-text="d.quantity"></td>
+              <td x-text="d.expand?.to_location?.name || '?'"></td>
+              <td x-text="d.vendor_name || '—'"></td>
+              <td x-show="mode === 'item'" x-text="d.po_number || '—'"></td>
+              <td x-text="d.moved_by || '—'"></td>
+              <td class="osd" x-text="d.osd_note || ''"></td>
+              <td x-text="d.packing_slip ? '✓ photo' : '—'"></td>
+            </tr>
+          </template>
+          <!-- Total received. In PO mode quantities of different items
+               don't add, so totals are shown per item instead. -->
+          <template x-if="mode === 'item'">
+            <tr class="total">
+              <td>Total received</td>
+              <td class="qty" x-text="totalQty"></td>
+              <td colspan="6"></td>
+            </tr>
+          </template>
+          <template x-for="t in poTotals" :key="t.name">
+            <tr class="total">
+              <td>Total received</td>
+              <td x-text="t.name"></td>
+              <td class="qty" x-text="t.qty"></td>
+              <td colspan="5"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+
+      <!-- Photo appendix: the actual evidence, full size, captioned. -->
+      <div class="appendix" x-show="appendix.length">
+        <h2>Photo appendix</h2>
+        <template x-for="(p, i) in appendix" :key="p.url">
+          <figure>
+            <img :src="p.url" :alt="p.caption" loading="lazy">
+            <figcaption>
+              <strong x-text="'Photo ' + (i + 1) + ' — ' + p.kind"></strong>
+              · <span x-text="p.caption"></span>
+            </figcaption>
+          </figure>
+        </template>
+      </div>
+    </main>
+  </template>
+
+</div>
+
+<script>
+TN.requireLogin();
+
+function receivingReport() {
+  const PB = window.location.origin;   // PocketBase serves this page — same origin
+  const params = new URLSearchParams(location.search);
+
+  return {
+    itemId: params.get('item') || '',
+    po: params.get('po') || '',
+    poInput: '',
+    state: 'loading',
+    errorMsg: '',
+    mode: '',            // 'item' | 'po'
+    title: '',
+    deliveries: [],
+    bulkItems: [],       // picker mode only
+
+    goPo() {
+      const po = this.poInput.trim();
+      if (po) location.href = 'receiving.html?po=' + encodeURIComponent(po);
+    },
+
+    get totalQty() {
+      return this.deliveries.reduce((s, d) => s + d.quantity, 0);
+    },
+
+    // PO mode: one total per item, because 300 bolts + 12 supports isn't
+    // a number that means anything.
+    get poTotals() {
+      if (this.mode !== 'po') return [];
+      const per = {};
+      for (const d of this.deliveries) {
+        const name = d.expand?.item?.name || '?';
+        per[name] = (per[name] || 0) + d.quantity;
+      }
+      return Object.entries(per).map(([name, qty]) => ({ name, qty }));
+    },
+
+    // Flatten every attachment into one captioned list: packing slips
+    // first-class, damage photos right behind their delivery.
+    get appendix() {
+      const out = [];
+      for (const d of this.deliveries) {
+        const caption = this.fmtDate(d.created) + ' · ' + d.quantity + '× ' +
+          (d.expand?.item?.name || '?') + ' at ' + (d.expand?.to_location?.name || '?') +
+          (d.vendor_name ? ' · ' + d.vendor_name : '') +
+          (d.po_number ? ' · PO ' + d.po_number : '') +
+          (d.osd_note ? ' · ⚠ ' + d.osd_note : '');
+        // PocketBase file URL pattern: /api/files/{collection}/{recordId}/{filename}
+        if (d.packing_slip) {
+          out.push({ kind: 'Packing slip', caption,
+                     url: `${PB}/api/files/movements/${d.id}/${d.packing_slip}` });
+        }
+        for (const f of (d.photos || [])) {
+          out.push({ kind: 'Delivery photo', caption,
+                     url: `${PB}/api/files/movements/${d.id}/${f}` });
+        }
+      }
+      return out;
+    },
+
+    fmtDate(iso) {
+      return new Date(iso).toLocaleDateString();
+    },
+
+    async load() {
+      try {
+        if (!this.itemId && !this.po) {
+          // Picker: list bulk materials so the report is reachable
+          // without knowing any ids.
+          const res = await TN.fetch(
+            `${PB}/api/collections/items/records?filter=(tracking_mode='bulk')&sort=name&perPage=200`);
+          if (!res.ok) throw new Error('could not list materials (' + res.status + ')');
+          this.bulkItems = (await res.json()).items;
+          this.state = 'pick';
+          return;
+        }
+
+        // Receive-shaped movements only (delivery = to set, from empty —
+        // migration 1783468807), chronological like a paper log.
+        // PO numbers are free text a human typed, so single quotes are
+        // escaped for PocketBase's filter syntax. perPage caps at 500 —
+        // plenty for one material or one PO.
+        let filter = `to_location != '' && from_location = '' && item != ''`;
+        if (this.itemId) {
+          filter += ` && item = '${this.itemId.replace(/'/g, "\\'")}'`;
+        } else {
+          filter += ` && po_number = '${this.po.replace(/'/g, "\\'")}'`;
+        }
+        const res = await TN.fetch(
+          `${PB}/api/collections/movements/records` +
+          `?filter=(${encodeURIComponent(filter)})&expand=item,to_location&sort=created&perPage=500`);
+        if (!res.ok) throw new Error('could not load deliveries (' + res.status + ')');
+        this.deliveries = (await res.json()).items;
+
+        this.mode = this.itemId ? 'item' : 'po';
+        this.title = this.mode === 'item'
+          ? (this.deliveries[0]?.expand?.item?.name ||
+             (await this.itemName()) || 'Material')
+          : 'PO ' + this.po;
+        this.state = 'ready';
+      } catch (err) {
+        this.state = 'error';
+        this.errorMsg = 'Could not build the report. Is PocketBase running? (' + err.message + ')';
+      }
+    },
+
+    // Item-mode title when the item has no deliveries yet (nothing to
+    // read the name off of): one extra lookup.
+    async itemName() {
+      const res = await TN.fetch(`${PB}/api/collections/items/records/${this.itemId}`);
+      return res.ok ? (await res.json()).name : '';
+    },
+  };
+}
+</script>
+</body>
+</html>

@@ -101,6 +101,12 @@ reproduce the entire database from the repo.
   Plus `moved_by` (text), `note` (text — PO/slip numbers). All shapes are
   enforced server-side by the collection's `createRule` (migrations
   1783468805–1783468807). Timestamp is the `created` autodate field.
+  Receiving-log fields (ADR 0013, all optional, offered by the UI only in
+  "New delivery" mode): `vendor_name`, `po_number` (free text a human
+  types — never a PO record), `packing_slip` (file, 1 — the form nags
+  loudly when absent but never blocks), `osd_note` (over/short/damaged in
+  the receiver's words), `photos` (file, ≤8 — damage close-ups).
+  `receiving.html` prints them per item or per PO as dispute evidence.
 - **`readings`** — the second append-only ledger (ADR 0012): hour-meter /
   odometer readings. `asset` (relation), `value` (number), `reading_type`
   (select: `hours` | `odometer` — copied from `items.meter` at capture so

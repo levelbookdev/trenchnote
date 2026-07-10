@@ -33,6 +33,16 @@ Highlights that are load-bearing for API clients:
 - **`movements` is an append-only ledger** (ADR 0002). No client — premium,
   third-party, or future core code — can ever update or delete a movement.
   Corrections are new records.
+- **Receiving-log fields on movements (ADR 0013, additive):**
+  `vendor_name`, `po_number`, `osd_note` (all free text), `packing_slip`
+  (file, max 1) and `photos` (file, max 8) — dispute evidence meant for
+  receive-shaped bulk movements (deliveries), though the create rule does
+  not forbid them elsewhere. All optional; existing clients are
+  unaffected. `po_number` is what a human typed at the truck — the API
+  has no concept of purchase orders or ordered quantities, by design.
+  Creating a movement with files requires a `multipart/form-data` POST
+  (PocketBase standard); JSON creates work unchanged when no files are
+  attached.
 - **The movement shape rule** (enforced server-side; malformed records are
   rejected no matter who sends them). A movement is exactly one of:
   - **Asset move:** `asset` set, `item` empty, `quantity = 0`,

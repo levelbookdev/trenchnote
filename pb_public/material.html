@@ -126,6 +126,52 @@
   .flash { margin-top: 14px; padding: 14px; font-weight: 700; color: #fff; background: var(--go); }
   .error { margin-top: 14px; padding: 14px; background: #fdecea; color: #a1160a; font-weight: 600; }
   .loading { color: var(--steel); padding: 40px 0; text-align: center; }
+
+  /* ---- Receiving log (ADR 0013) ------------------------------------
+     Delivery-only fields: vendor, PO, packing-slip photo, OS&D note.
+     Photo buttons are the same glove-sized .cam as asset.html. */
+  .photo-row { display: flex; gap: 10px; }
+  .photo-row .cam {
+    flex: 1; min-height: 56px; margin-bottom: 10px;
+    font: inherit; font-size: 15px; font-weight: 700;
+    background: var(--paper); border: 2px solid var(--ink);
+    cursor: pointer; color: var(--ink);
+  }
+  .photo-row .cam.has { border-color: var(--go); color: var(--go); }
+  /* The nag: loud amber, never a wall. A delivery without a slip photo
+     still beats a delivery that never got logged. */
+  .nag {
+    margin: 4px 0 10px; padding: 12px;
+    background: #fff4e5; color: #8a5a00; border: 2px solid #8a5a00;
+    font-weight: 700; font-size: 14px;
+  }
+
+  /* ---- Delivery history -------------------------------------------- */
+  .dlv-row {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 12px 16px; border-bottom: 1px solid var(--line);
+  }
+  .dlv-row:last-child { border-bottom: none; }
+  .dlv-thumb {
+    flex: 0 0 56px; width: 56px; height: 56px; object-fit: cover;
+    border: 2px solid var(--ink); display: block;
+  }
+  .dlv-noslip {
+    flex: 0 0 56px; width: 56px; height: 56px;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px dashed var(--line); color: var(--steel);
+    font-size: 10px; font-weight: 700; text-align: center;
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  .dlv-body { flex: 1; min-width: 0; font-size: 14px; }
+  .dlv-head { font-weight: 800; }
+  .dlv-meta { color: var(--steel); }
+  .dlv-osd { color: #8a5a00; font-weight: 600; }
+  .dlv-body a { color: var(--safety); font-weight: 700; }
+  .report-link {
+    display: block; margin-top: 12px;
+    color: var(--safety); font-weight: 700; font-size: 14px;
+  }
 </style>
 </head>
 <body>
@@ -207,7 +253,45 @@
         </p>
 
         <input type="number" x-model.number="qty" min="1" step="1" placeholder="Quantity">
-        <input type="text" x-model="note" placeholder="Note — PO #, slip #, where installed (optional)">
+
+        <!-- Receiving log (ADR 0013): dispute evidence, deliveries only.
+             The first dropdown on "New delivery" means material arriving
+             from outside — the moment the packing slip is in your hand. -->
+        <template x-if="isDelivery">
+          <div>
+            <input type="text" x-model="vendor" placeholder="Vendor — who delivered (optional)">
+            <input type="text" x-model="po" placeholder="PO number (optional)">
+
+            <div class="photo-row">
+              <button type="button" class="cam" :class="{ has: slipPhoto }"
+                      @click="$refs.slipInput.click()"
+                      x-text="slipPhoto ? '📷 ✓ Packing slip attached' : '📷 Packing slip photo'"></button>
+              <input type="file" accept="image/*" capture="environment" hidden
+                     x-ref="slipInput"
+                     @change="slipPhoto = $event.target.files[0] || null">
+            </div>
+            <!-- Nag loudly, never block: a delivery logged without a photo
+                 still beats a delivery not logged. -->
+            <div class="nag" x-show="!slipPhoto">
+              ⚠ No packing slip photo — this delivery will be hard to prove
+              later. Snap the slip before the driver leaves.
+            </div>
+
+            <input type="text" x-model="osd"
+                   placeholder="Over / short / damaged? e.g. “480 of 500 per slip, 2 crates damaged”">
+
+            <div class="photo-row">
+              <button type="button" class="cam" :class="{ has: extraPhotos.length }"
+                      @click="$refs.extraInput.click()"
+                      x-text="extraPhotos.length ? ('📷 ✓ ' + extraPhotos.length + ' damage photo' + (extraPhotos.length === 1 ? '' : 's')) : '📷 Damage photos (optional)'"></button>
+              <input type="file" accept="image/*" capture="environment" multiple hidden
+                     x-ref="extraInput"
+                     @change="extraPhotos = Array.from($event.target.files)">
+            </div>
+          </div>
+        </template>
+
+        <input type="text" x-model="note" placeholder="Note — slip #, where installed (optional)">
         <input type="text" x-model="movedBy" placeholder="Your name (optional)">
 
         <button class="go" :disabled="!canSubmit || busy" @click="move()"
@@ -216,6 +300,39 @@
         <div class="flash" x-show="flash" x-text="flash"></div>
         <div class="error" x-show="moveError" x-text="moveError"></div>
       </div>
+
+      <!-- Delivery history: the receiving log, straight from the ledger.
+           Every receive-shaped movement of this item, newest first, with
+           its evidence (slip thumbnail, OS&D note). -->
+      <div class="plate" style="margin-top: 26px" x-show="deliveries.length">
+        <div class="eyebrow">Delivery history</div>
+        <template x-for="d in deliveries" :key="d.id || d.created">
+          <div class="dlv-row">
+            <a x-show="d.packing_slip" :href="slipUrl(d)" target="_blank">
+              <img class="dlv-thumb" :src="slipUrl(d, true)" alt="Packing slip">
+            </a>
+            <div class="dlv-noslip" x-show="!d.packing_slip">no slip photo</div>
+            <div class="dlv-body">
+              <div class="dlv-head"
+                   x-text="d.quantity + ' → ' + locName(d.to_location)"></div>
+              <div class="dlv-meta"
+                   x-text="fmtDate(d.created)
+                           + (d.vendor_name ? ' · ' + d.vendor_name : '')
+                           + (d.po_number ? ' · PO ' + d.po_number : '')
+                           + (d.moved_by ? ' · ' + d.moved_by : '')"></div>
+              <div class="dlv-osd" x-show="d.osd_note" x-text="'⚠ ' + d.osd_note"></div>
+              <div x-show="(d.photos || []).length">
+                <template x-for="(p, i) in (d.photos || [])" :key="p">
+                  <a :href="photoUrl(d, p)" target="_blank" x-text="'photo ' + (i + 1) + ' '"></a>
+                </template>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+      <a class="report-link" :href="'receiving.html?item=' + id" x-show="deliveries.length">
+        🖨 Receiving report (print / vendor dispute) →
+      </a>
     </main>
   </template>
 
@@ -239,6 +356,12 @@ function materialPage() {
     qty: null,
     note: '',
     movedBy: localStorage.getItem('tn_name') || '',
+    // Receiving log (ADR 0013) — delivery-only evidence fields
+    vendor: '',
+    po: '',
+    osd: '',
+    slipPhoto: null,
+    extraPhotos: [],
     busy: false,
     flash: '',
     moveError: '',
@@ -279,9 +402,42 @@ function materialPage() {
       return true;
     },
 
+    // "New delivery" mode = the receiving-log fields apply (ADR 0013).
+    // A delivery is a receive-shaped movement: no from_location.
+    get isDelivery() {
+      return !this.fromLoc && this.toLoc !== '@consumed';
+    },
+
+    // The receiving log, straight from the already-loaded ledger:
+    // receive-shaped movements (to set, from empty) of this item,
+    // newest first (the fetch sorts -created).
+    get deliveries() {
+      return this.movements.filter(m => m.to_location && !m.from_location);
+    },
+
     stockAt(locId) {
       const s = this.stock.find(s => s.id === locId);
       return s ? s.qty : 0;
+    },
+
+    locName(locId) {
+      const l = this.locations.find(l => l.id === locId);
+      return l ? l.name : '?';
+    },
+
+    fmtDate(iso) {
+      return iso ? new Date(iso).toLocaleDateString() : 'queued on this phone';
+    },
+
+    // PocketBase file URL pattern: /api/files/{collection}/{recordId}/{filename}
+    // ?thumb asks the server for a small crop — kilobytes, not the full shot.
+    slipUrl(m, thumb) {
+      return `${PB}/api/files/movements/${m.id}/${m.packing_slip}` +
+             (thumb ? '?thumb=100x100' : '');
+    },
+
+    photoUrl(m, filename) {
+      return `${PB}/api/files/movements/${m.id}/${filename}`;
     },
 
     async load() {
@@ -345,42 +501,90 @@ function materialPage() {
         moved_by: this.movedBy || 'unspecified',
         note: this.note || ''
       };
+      // Receiving log (ADR 0013): dispute evidence rides on the delivery
+      // itself. Transfers and consumes never carry these.
+      const files = { packing_slip: null, photos: [] };
+      if (this.isDelivery) {
+        movement.vendor_name = this.vendor || '';
+        movement.po_number = this.po || '';
+        movement.osd_note = this.osd || '';
+        // Spread, don't assign: extraPhotos is an Alpine reactive Proxy,
+        // and IndexedDB's structured clone can't serialize proxies — an
+        // offline enqueue would throw DataCloneError. The Files inside
+        // are untouched by Alpine (it only proxies plain objects/arrays).
+        files.packing_slip = this.slipPhoto;
+        files.photos = [...this.extraPhotos];
+      }
+      const hasFiles = !!(files.packing_slip || files.photos.length);
       const doneMsg = consuming
         ? '✓ ' + this.qty + ' used'
         : '✓ ' + this.qty + ' → ' + (dest ? dest.name : 'destination');
 
-      try {
-        // One POST, no cache to update afterwards: bulk stock is always
-        // derived from the ledger, so the ledger entry IS the whole move.
-        const res = await TN.fetch(`${PB}/api/collections/movements/records`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(movement)
-        });
-        if (!res.ok) throw new Error('movement rejected (' + res.status + ')');
-
-        this.flash = doneMsg;
+      const clearForm = () => {
         this.qty = null;
         this.toLoc = '';
         this.note = '';
+        this.vendor = '';
+        this.po = '';
+        this.osd = '';
+        this.slipPhoto = null;
+        this.extraPhotos = [];
+      };
+
+      try {
+        // One POST, no cache to update afterwards: bulk stock is always
+        // derived from the ledger, so the ledger entry IS the whole move.
+        // Deliveries with photos go as multipart (the only way files
+        // travel over HTTP); everything else stays JSON. In multipart,
+        // null fields are SKIPPED — FormData would send the text "null".
+        let res;
+        if (hasFiles) {
+          const fd = new FormData();
+          for (const k in movement) {
+            if (movement[k] !== null && movement[k] !== undefined) fd.append(k, movement[k]);
+          }
+          if (files.packing_slip) fd.append('packing_slip', files.packing_slip, 'slip.jpg');
+          for (const p of files.photos) fd.append('photos', p, 'photo.jpg');
+          res = await TN.fetch(`${PB}/api/collections/movements/records`, {
+            method: 'POST',
+            body: fd
+          });
+        } else {
+          res = await TN.fetch(`${PB}/api/collections/movements/records`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(movement)
+          });
+        }
+        if (!res.ok) throw new Error('movement rejected (' + res.status + ')');
+
+        this.flash = doneMsg;
+        clearForm();
         await this.load();   // re-derive the stock plate
       } catch (err) {
         if (TNSync.isNetworkError(err)) {
-          // No signal: queue it, and fold the movement into the local
-          // list so the stock plate re-derives optimistically — sums are
-          // order-independent, so the math is the same one the server
-          // will reach after sync.
+          // No signal: queue it (photos ride along as Blobs — ADR 0013),
+          // and fold the movement into the local list so the stock plate
+          // re-derives optimistically — sums are order-independent, so
+          // the math is the same one the server will reach after sync.
           await TNSync.enqueue(movement, null,
-            this.qty + '× ' + this.item.name + (consuming ? ' used' : ' → ' + (dest ? dest.name : '?')));
+            this.qty + '× ' + this.item.name + (consuming ? ' used' : ' → ' + (dest ? dest.name : '?')),
+            hasFiles ? files : null);
           this.movements.unshift({
+            id: movement.id,   // the pre-generated id — stable render key
             to_location: movement.to_location || '',
             from_location: movement.from_location || '',
-            quantity: movement.quantity
+            quantity: movement.quantity,
+            vendor_name: movement.vendor_name || '',
+            po_number: movement.po_number || '',
+            osd_note: movement.osd_note || '',
+            moved_by: movement.moved_by
+            // no `created`, no `packing_slip`: the delivery-history row
+            // shows "queued on this phone" and the no-photo placeholder
+            // until the real record syncs.
           });
           this.flash = doneMsg + ' — saved on this phone, will sync';
-          this.qty = null;
-          this.toLoc = '';
-          this.note = '';
+          clearForm();
         } else {
           this.moveError = 'Move failed: ' + err.message;
         }
