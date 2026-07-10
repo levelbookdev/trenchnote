@@ -13,7 +13,7 @@ origin that serves the pages (e.g. `http://192.168.1.50:8090`).
 
 ## Contract collections
 
-These five collections — their fields, semantics, and the operations marked
+These six collections — their fields, semantics, and the operations marked
 allowed — are stable. A breaking change to any of them requires a new ADR
 and a version bump of this contract, announced in the release notes.
 
@@ -24,6 +24,7 @@ and a version bump of this contract, announced in the release notes.
 | `assets` | ✔ contract | ✔ | ✔ (see cache rule) | admin-only |
 | `movements` | ✔ contract | ✔ (see shape rule) | **never** | **never** |
 | `reservations` | ✔ contract | ✔ (open only) | ✔ (lifecycle) | admin-only |
+| `readings` | ✔ contract | ✔ | **never** | **never** |
 
 Field-level shapes are defined by the migrations in `pb_migrations/` and
 explained in the [developer guide](DEVELOPER_GUIDE.md#data-model).
@@ -58,6 +59,23 @@ Highlights that are load-bearing for API clients:
 - **`tag_code` is permanent** once printed on a label (ADR 0010): unique,
   never recycled onto different gear. QR labels encode
   `{Base URL}/asset.html?code={tag_code}`.
+- **`readings` is an append-only ledger** (ADR 0012), same rules as
+  movements: no updates, no deletes, corrections are new records. A
+  reading is `asset` + `value` + `reading_type` (`hours` | `odometer`) +
+  optional `recorded_by` (free text) and `photo` (the gauge); the
+  timestamp is `created`. **Latest reading is derived** (newest record per
+  asset — there is no latest-reading column on assets), and a value lower
+  than its predecessor is legal data (replaced meter or typo) that
+  consumers should flag, not drop.
+- **Billing facts on locations (ADR 0012):** `job_code` is the accounting
+  job number equipment time at that location is billed to; an asset's
+  "current job" is derived as its current location's `job_code` and is
+  deliberately stored nowhere. `notify_email` is the PM/super to notify
+  when equipment leaves the location.
+- **`items.meter`** (`hours` | `odometer`, empty = no meter) drives
+  whether the UI offers a reading at scan time; `assets.assigned_to` is
+  free-text custodianship. Both optional, both plain facts with no
+  side effects.
 
 ## Other contract surface
 
@@ -103,7 +121,8 @@ disabled, so accounts are created by the admin in the PocketBase UI.
   fields, changed rules, changed URL patterns) require an ADR and bump this
   document's version, announced in release notes.
 - Contract v1 as published here reflects the schema through migration
-  `1783468808` (reservation lifecycle).
+  `1783468810` (timecard data capture, ADR 0012 — an additive change:
+  one new collection and four new optional fields).
 - Core is currently developed and tested against **PocketBase 0.39.x**
   (pin with `PB_VERSION=0.39.6 ./scripts/setup.sh`). A PocketBase upgrade
   that changes REST behavior is treated as a breaking change and handled

@@ -96,23 +96,39 @@ fi
 echo "Seeding demo data into $TN_URL ..."
 
 # ---- Locations (6) ----------------------------------------------------------
-loc() { api POST "collections/locations/records" "{\"name\":\"$1\",\"type\":\"$2\"}"; rid; }
+# loc NAME TYPE [JOB_CODE] [NOTIFY_EMAIL] — job_code is what the office
+# bills equipment time against; notify_email is the PM who hears when
+# something scans OFF the site (ADR 0012).
+loc() {
+  _body="{\"name\":\"$1\",\"type\":\"$2\""
+  [ -n "${3:-}" ] && _body="$_body,\"job_code\":\"$3\""
+  [ -n "${4:-}" ] && _body="$_body,\"notify_email\":\"$4\""
+  api POST "collections/locations/records" "$_body}"
+  rid
+}
 YARD=$(loc "Millbrook Staging Yard" yard)            # the sentinel
 SHOP=$(loc "Shop & Warehouse" warehouse)
-WWTP=$(loc "Bear Creek WWTP Expansion" jobsite)
-LS4=$(loc "Millbrook Lift Station 4" jobsite)
-FM12=$(loc "Hwy 12 Force Main" jobsite)
-WTP=$(loc "Cedar Falls WTP Clearwell" jobsite)
-echo "  6 locations"
+WWTP=$(loc "Bear Creek WWTP Expansion" jobsite 6054.2 pm.bearcreek@example.com)
+LS4=$(loc "Millbrook Lift Station 4" jobsite 6101 pm.millbrook@example.com)
+FM12=$(loc "Hwy 12 Force Main" jobsite 6088)
+WTP=$(loc "Cedar Falls WTP Clearwell" jobsite 6042.1 pm.cedarfalls@example.com)
+echo "  6 locations (4 with job codes, 3 with off-site notify emails)"
 
 # ---- Items: unique (assets hang off these) + bulk ---------------------------
-item() { api POST "collections/items/records" \
-  "{\"name\":\"$1\",\"category\":\"$2\",\"tracking_mode\":\"$3\"}"; rid; }
+# item NAME CATEGORY MODE [METER] — meter (hours|odometer) marks the whole
+# KIND of thing as having a gauge; asset.html then offers a reading at the
+# scan moment (ADR 0012).
+item() {
+  _body="{\"name\":\"$1\",\"category\":\"$2\",\"tracking_mode\":\"$3\""
+  [ -n "${4:-}" ] && _body="$_body,\"meter\":\"$4\""
+  api POST "collections/items/records" "$_body}"
+  rid
+}
 
 SCAF=$(item "Baker Scaffold Set" Access unique)
-LIFT19=$(item "19ft Scissor Lift" Access unique)
-LIFT26=$(item "26ft Scissor Lift" Access unique)
-GEN=$(item "Towable Generator 25kW" Power unique)
+LIFT19=$(item "19ft Scissor Lift" Access unique hours)
+LIFT26=$(item "26ft Scissor Lift" Access unique hours)
+GEN=$(item "Towable Generator 25kW" Power unique hours)
 PUMP6=$(item "Trash Pump 6in" Dewatering unique)
 PUMP3=$(item "Trash Pump 3in" Dewatering unique)
 TSTA=$(item "Total Station" Survey unique)
@@ -130,7 +146,8 @@ B_SILT=$(item "Silt Fence (rolls)" Erosion bulk)
 B_HOSE=$(item "Dewatering Hose 4in (sections)" Dewatering bulk)
 B_MH=$(item "Precast Manhole Sections" Structures bulk)
 B_GRAV=$(item "Bedding Gravel (tons)" Earthwork bulk)
-echo "  10 unique item types + 10 bulk materials"
+TRUCK=$(item "Crew Truck F-350" Vehicles unique odometer)
+echo "  11 unique item types (4 metered) + 10 bulk materials"
 
 # ---- Assets (25) — created unplaced; placement is a LEDGER EVENT ------------
 # asset TAG item ownership [vendor] [po] [serial]
@@ -175,7 +192,11 @@ A22=$(asset A022 "$WELD"   owned "" "" W250-2)
 A23=$(asset A023 "$LIFT19" owned "" "" SN-2216)
 A24=$(asset A024 "$SCAF"   owned)
 A25=$(asset A025 "$PUMP3"  rented "Sunbelt Rentals" PO-4152 TP3-SB-8)
-echo "  25 assets (5 rented)"
+# A truck is custodianship, not bartering: assigned to a person (ADR 0012)
+api POST "collections/assets/records" \
+  "{\"item\":\"$TRUCK\",\"tag_code\":\"A026\",\"ownership\":\"owned\",\"serial_number\":\"F350-2019-07\",\"assigned_to\":\"M. Castillo\"}"
+A26=$(rid)
+echo "  26 assets (5 rented, 1 assigned to a person)"
 
 # Initial placements — everything arrives from outside the system
 for a in $A01 $A02 $A03 $A24; do place "$a" "" "$YARD" "R. Alvarez"; done
@@ -220,7 +241,20 @@ place "$A11" "$FM12" "$YARD" "R. Alvarez"      # pump back after dewatering
 place "$A03" "$YARD" "$WTP"  "T. Nguyen"
 place "$A20" "$SHOP" "$FM12" "M. Castillo"
 place "$A15" "$WWTP" "$WTP"  "T. Nguyen"       # survey gear follows the work
+place "$A26" ""      "$FM12" "M. Castillo"     # the truck lives with its person
 echo "  $MOVES asset movements (placements + transfers)"
+
+# ---- Meter readings (ADR 0012) — the append-only readings ledger ------------
+# reading ASSET VALUE TYPE WHO. Note A026's second odometer entry is LOWER
+# than its first: legal data (typo or replaced gauge), rendered flagged.
+reading() { api POST "collections/readings/records" \
+  "{\"asset\":\"$1\",\"value\":$2,\"reading_type\":\"$3\",\"recorded_by\":\"$4\"}"; }
+reading "$A06" 612.4  hours    "R. Alvarez"     # month-end walkdown
+reading "$A06" 619.8  hours    "M. Castillo"    # captured at a scan-move
+reading "$A08" 1204.0 hours    "M. Castillo"
+reading "$A26" 52810  odometer "M. Castillo"
+reading "$A26" 52240  odometer "M. Castillo"    # lower than previous -> flagged in UI
+echo "  5 meter readings (1 flagged lower-than-previous)"
 
 # ---- Bulk movements: all three contract shapes -------------------------------
 # receive ITEM QTY TO WHO NOTE          (from empty  = delivery)
@@ -310,8 +344,10 @@ echo "  8 reservations (4 open incl. 1 expired + 1 legacy empty-status, 2 fulfil
 
 echo ""
 echo "Done. Open $TN_URL and sign in — the dashboard should show 6"
-echo "locations, 25 assets, 10 materials with derived stock, a spoken-for"
-echo "queue, and a busy recently-moved feed."
+echo "locations (job codes + notify emails on the jobsites), 26 assets,"
+echo "10 materials with derived stock, a spoken-for queue, a busy"
+echo "recently-moved feed, and meter readings on A006/A008/A026 (A026's"
+echo "odometer history includes a flagged lower-than-previous entry)."
 echo ""
 echo "Note: all movement timestamps read 'now' — the public API cannot"
 echo "backdate an append-only ledger (that's a feature). Sequences and"

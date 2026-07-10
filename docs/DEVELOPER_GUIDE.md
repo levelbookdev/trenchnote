@@ -43,7 +43,7 @@ trenchnote/
 
 ## Data model
 
-Five collections, created by the migrations in `pb_migrations/` (one file per
+Six collections, created by the migrations in `pb_migrations/` (one file per
 collection, plus later alterations). PocketBase applies pending migrations
 automatically at startup, in filename order — a fresh clone reproduces the
 whole database on first `serve`.
@@ -57,12 +57,23 @@ What a thing *is* ("19' Scissor Lift"), never a specific one.
 - `bulk` → there are no individual records; quantities move through the
   ledger (see below).
 
+`meter` (`hours` | `odometer`, empty = none — ADR 0012) says whether this
+*kind* of thing has a gauge. It lives on the catalog because every 19'
+scissor lift has an hour meter — flag it once and the asset page knows to
+offer a reading field, and what to call it.
+
 ### locations
 
 `name` + `type` (`jobsite` | `yard` | `warehouse` | `transit`). Optional
 convention: if you want to track *where* material was installed (not just
 that it was used), create a location like "Installed — Northside" and
 transfer there instead of consuming (see ADR 0005).
+
+Two optional office-facing fields (ADR 0012): `job_code`, the accounting
+job number equipment time at this location is billed to (text — job number
+formats vary), and `notify_email`, the PM/super to notify when equipment
+leaves this location. An asset's "current job" is **derived** — its
+current location's `job_code` — never stored anywhere.
 
 ### assets — a specific physical thing
 
@@ -71,6 +82,10 @@ index** — one label, one asset, enforced by SQLite). Rentals are not special:
 `ownership=rented` plus `vendor`/`po_number`, nothing else changes.
 
 `current_location` is a **cache**, not truth — see the ledger rules below.
+
+`assigned_to` (text, optional — ADR 0012) is custodianship: trucks and
+vehicles belong to a person even though they rarely trade between jobs the
+way shared tools do. Free text like `moved_by` — crews don't have accounts.
 
 ### movements — the append-only ledger, the source of truth
 
@@ -116,6 +131,22 @@ claim pre-closed; the `updateRule` lets any signed-in user close any claim.
 An open claim past its `expected_release` is flagged red on both pages —
 stale claims are unresolved questions and are never hidden. Closed claims
 drop out of the UI but stay in the database.
+
+### readings — the second append-only ledger (ADR 0012)
+
+Hour-meter / odometer readings, one record per glance at the gauge:
+`asset` (relation), `value`, `reading_type` (`hours` | `odometer` — copied
+from `items.meter` at capture time so each record is self-contained),
+`recorded_by` (free text), `photo` (the gauge, optional). Timestamp is the
+`created` autodate, same convention as movements.
+
+Same mutability rules as movements — `updateRule`/`deleteRule` are `null`,
+corrections are new readings — because these numbers end up on equipment
+invoices and the history is what settles a dispute. Two derived answers,
+never stored: **latest reading** = newest record per asset, and the
+**lower-than-previous flag** = a reading smaller than its predecessor
+(meter replaced, or a typo — flagged in the UI at render time by comparing
+neighbors, accepted either way).
 
 ## The two invariants
 
@@ -242,7 +273,7 @@ TrenchNote is open-core: this AGPL repo is complete and self-sufficient,
 and any paid tooling lives *outside* it, talking to PocketBase's REST API
 like any other client would
 ([ADR 0011](adr/0011-core-premium-extension-boundary.md)). The practical
-consequence for anyone working here: the five collections' shapes and rules
+consequence for anyone working here: the six collections' shapes and rules
 are a published contract ([API.md](API.md)), so breaking changes to them
 need an ADR and a contract version bump — not just a migration. Nothing in
 this repo may ever reference, detect, or depend on premium code.

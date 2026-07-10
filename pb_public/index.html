@@ -69,6 +69,14 @@
     letter-spacing: -0.01em;
   }
   .group-head .count { color: var(--steel); font-size: 13px; font-weight: 700; }
+  .group-sub {
+    padding: 4px 12px 6px; border-bottom: 1px solid var(--line);
+    color: var(--steel); font-size: 12px;
+  }
+  .group-sub .job {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-weight: 700; color: var(--ink);
+  }
 
   .asset-row {
     display: flex; align-items: center; gap: 10px;
@@ -156,6 +164,14 @@
           <div class="group-head">
             <span class="loc" x-text="g.name"></span>
             <span class="count" x-text="g.assets.length + (g.assets.length === 1 ? ' asset' : ' assets')"></span>
+          </div>
+          <!-- Billing/notification facts on the location (ADR 0012): the
+               job number this site's equipment time is charged to, and the
+               PM to notify when something scans OFF this site. -->
+          <div class="group-sub" x-show="g.job_code || g.notify_email">
+            <span class="job" x-show="g.job_code" x-text="'Job ' + g.job_code"></span>
+            <span x-show="g.job_code && g.notify_email"> · </span>
+            <span x-show="g.notify_email" x-text="'moves off-site notify ' + g.notify_email"></span>
           </div>
           <!-- Each row is a link to the same page a QR scan opens -->
           <template x-for="a in g.assets" :key="a.id">
@@ -258,7 +274,8 @@ function dashboard() {
         (byLoc[key] = byLoc[key] || []).push(a);
       }
       const groups = this.locations.map(l => ({
-        id: l.id, name: l.name, assets: byLoc[l.id] || []
+        id: l.id, name: l.name, assets: byLoc[l.id] || [],
+        job_code: l.job_code || '', notify_email: l.notify_email || ''
       }));
       if (byLoc['none']) {
         groups.push({ id: 'none', name: 'Unassigned', assets: byLoc['none'] });

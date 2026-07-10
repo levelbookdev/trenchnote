@@ -63,7 +63,7 @@ Do not change these without explicit approval from the maintainer.
   as sole copyright holder (or use a CLA for outside contributors) so a paid
   managed-hosting tier remains possible later.
 
-## Data model — 5 collections
+## Data model — 6 collections
 
 Schema lives in `pb_migrations/` as versioned PocketBase JS migrations, NOT as
 hand-built collections in the admin UI. A fresh self-hoster must be able to
@@ -71,13 +71,21 @@ reproduce the entire database from the repo.
 
 - **`items`** — the catalog: what a thing *is*, not a specific one.
   `name`, `description`, `category`, `tracking_mode` (select: `unique` | `bulk`),
-  `photo` (file).
+  `photo` (file), `meter` (select: `hours` | `odometer`, empty = no meter —
+  a property of the kind of thing, so it's flagged once per catalog entry;
+  drives the optional reading prompt on asset.html — ADR 0012).
 - **`locations`** — `name`, `type` (select: `jobsite` | `yard` | `warehouse` |
-  `transit`).
+  `transit`), plus two optional office-facing facts (ADR 0012): `job_code`
+  (text — the accounting job number equipment time here is billed to; an
+  asset's "current job" is DERIVED as its current location's job_code,
+  never stored) and `notify_email` (the PM/super to notify when equipment
+  leaves this site).
 - **`assets`** — a specific physical instance of a unique item.
   `item` (relation→items), `tag_code` (text, **unique index**), `serial_number`,
   `ownership` (select: `owned` | `rented`), `vendor`, `po_number`,
-  `current_location` (relation→locations).
+  `current_location` (relation→locations), `assigned_to` (text, optional —
+  custodianship for trucks/vehicles that belong to a person; free text
+  like `moved_by`, ADR 0012).
 - **`movements`** — the append-only ledger and **source of truth**. One
   collection holds both kinds of moves, distinguished by which fields are set:
   - *Asset move:* `asset` (relation→assets) set; `item` empty, `quantity` 0;
@@ -91,6 +99,15 @@ reproduce the entire database from the repo.
   Plus `moved_by` (text), `note` (text — PO/slip numbers). All shapes are
   enforced server-side by the collection's `createRule` (migrations
   1783468805–1783468807). Timestamp is the `created` autodate field.
+- **`readings`** — the second append-only ledger (ADR 0012): hour-meter /
+  odometer readings. `asset` (relation), `value` (number), `reading_type`
+  (select: `hours` | `odometer` — copied from `items.meter` at capture so
+  each record is self-contained), `recorded_by` (text), `photo` (the
+  gauge). Update/delete superuser-only; corrections are new readings —
+  these numbers end up on invoices. **Latest reading is derived** (newest
+  record per asset, no column on assets); a value lower than its
+  predecessor is accepted (replaced meter / typo) and flagged at render
+  time, never blocked and never stored as a flag.
 - **`reservations`** — `asset` (relation), `requested_by`, `needed_by` (date),
   `expected_release` (date), `note`, `status` (select: `open` | `fulfilled` |
   `cancelled`; **empty = open** for pre-status rows — filter with "not
