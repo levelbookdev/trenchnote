@@ -14,3 +14,8 @@ Thumbs.db
 
 # Local editor/agent tooling config
 .claude/
+
+# Local seed scripts containing REAL division data (employee names, client
+# job codes, odometer readings) — this is a public repo; office data stays
+# out of it. The committed seed_demo.sh stays fake-named.
+scripts/seed_local_*
