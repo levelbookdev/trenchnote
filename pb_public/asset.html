@@ -571,7 +571,7 @@
               <span class="val" x-text="fmtVal(r.value)"></span>
               <span class="low" x-show="isLow(i)">lower than previous</span>
               <span class="who"
-                    x-text="fmtWhen(r.created) + (r.recorded_by && r.recorded_by !== 'unspecified' ? ' · ' + r.recorded_by : '')"></span>
+                    x-text="fmtWhen(r.read_at || r.created) + (r.recorded_by && r.recorded_by !== 'unspecified' ? ' · ' + r.recorded_by : '')"></span>
               <a x-show="r.photo" :href="gaugeUrl(r)" target="_blank">gauge photo</a>
             </div>
           </template>
@@ -730,8 +730,12 @@ function assetPage() {
     },
 
     fmtWhen(pbDate) {
+      // Format in UTC: read_at (ADR 0016) is date-only UTC midnight, so
+      // local formatting would show the previous day in western zones —
+      // the same trap the reservation/rental dates avoid. created is a
+      // UTC instant too, so its UTC date is a fine "entered" date.
       return new Date(pbDate).toLocaleDateString(undefined,
-        { month: 'short', day: 'numeric' });
+        { month: 'short', day: 'numeric', timeZone: 'UTC' });
     },
 
     gaugeUrl(r) {
@@ -841,8 +845,12 @@ function assetPage() {
         //    lower-than-previous flags meaningfully.
         if (this.meterType) {
           const rdFilter = encodeURIComponent(`asset='${this.asset.id}'`);
+          // Order by observation date (ADR 0016), ties/empties falling back
+          // to created — same shape as the inspections sort. So "latest
+          // reading" and the lower-than-previous flag reflect when the
+          // gauge was READ, not when the row was entered.
           const rdRes = await TN.fetch(
-            `${PB}/api/collections/readings/records?filter=(${rdFilter})&sort=-created&perPage=6`
+            `${PB}/api/collections/readings/records?filter=(${rdFilter})&sort=-read_at,-created&perPage=6`
           );
           this.readings = (await rdRes.json()).items;
         }
@@ -968,7 +976,12 @@ function assetPage() {
         // Copied from items.meter at capture time so the record stays
         // self-contained even if the catalog is re-flagged later.
         reading_type: this.meterType,
-        recorded_by: this.movedBy || 'unspecified'
+        recorded_by: this.movedBy || 'unspecified',
+        // The observation date, stamped NOW at capture (ADR 0016) so a
+        // reading captured offline carries its real read-day through the
+        // queue, not the sync-day. Date-only UTC midnight, like the
+        // reservations/inspections dates.
+        read_at: new Date().toISOString().slice(0, 10) + ' 00:00:00.000Z'
       };
     },
 

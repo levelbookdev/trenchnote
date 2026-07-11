@@ -77,14 +77,22 @@ Highlights that are load-bearing for API clients:
   non-commercial fact about the asset and live in core; the *rate* does
   not (that stays with whatever tool prices the rental). Added in migration
   `1783468816`; **additive to contract v1** (see Versioning).
+- **`items.item_code` (ADR 0018):** optional, non-unique text — the
+  office's catalog/reference number for a kind of thing (e.g. a bulk
+  item's "Misc-66"), distinct from an asset's unique `tag_code`. Migration
+  `1783468818`; additive.
 - **`readings` is an append-only ledger** (ADR 0012), same rules as
   movements: no updates, no deletes, corrections are new records. A
   reading is `asset` + `value` + `reading_type` (`hours` | `odometer`) +
-  optional `recorded_by` (free text) and `photo` (the gauge); the
-  timestamp is `created`. **Latest reading is derived** (newest record per
-  asset — there is no latest-reading column on assets), and a value lower
-  than its predecessor is legal data (replaced meter or typo) that
-  consumers should flag, not drop.
+  optional `recorded_by` (free text), `photo` (the gauge), and `read_at`
+  (ADR 0016 — the observation date, date-only UTC midnight, empty = fall
+  back to `created`; set at capture so offline readings keep their real
+  read-day). `created` still records system-entry time. **Latest reading
+  is derived** (newest record per asset — there is no latest-reading column
+  on assets); derivation now orders by `read_at`, falling back to
+  `created` — a refinement clients should mirror (`sort=-read_at,-created`).
+  A value lower than its predecessor is legal data (replaced meter or typo)
+  that consumers should flag, not drop.
 - **Billing facts on locations (ADR 0012):** `job_code` is the accounting
   job number equipment time at that location is billed to; an asset's
   "current job" is derived as its current location's `job_code` and is
@@ -163,9 +171,10 @@ disabled, so accounts are created by the admin in the PocketBase UI.
   fields, changed rules, changed URL patterns) require an ADR and bump this
   document's version, announced in release notes.
 - Contract v1 as published here reflects the schema through migration
-  `1783468816` (readings — ADR 0012; certs & inspections — ADR 0014;
-  receiving log — ADR 0013; rental dates — ADR 0015; all additive: new
-  collections and optional fields only).
+  `1783468818` (readings — ADR 0012; certs & inspections — ADR 0014;
+  receiving log — ADR 0013; rental dates — ADR 0015; reading observation
+  date — ADR 0016; item code — ADR 0018; all additive: new collections and
+  optional fields only).
 - Core is currently developed and tested against **PocketBase 0.39.x**
   (pin with `PB_VERSION=0.39.6 ./scripts/setup.sh`). A PocketBase upgrade
   that changes REST behavior is treated as a breaking change and handled

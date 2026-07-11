@@ -66,6 +66,11 @@ What a thing *is* ("19' Scissor Lift"), never a specific one.
 scissor lift has an hour meter — flag it once and the asset page knows to
 offer a reading field, and what to call it.
 
+`item_code` (text, optional, non-unique — ADR 0018) is the office's
+catalog/reference number for a kind of thing (a bulk item's "Misc-66"),
+distinct from an asset's unique `tag_code`. Most useful for bulk items,
+which otherwise carry no code anywhere; shown on material.html.
+
 ### locations
 
 `name` + `type` (`jobsite` | `yard` | `warehouse` | `transit`). Optional
@@ -162,16 +167,21 @@ drop out of the UI but stay in the database.
 Hour-meter / odometer readings, one record per glance at the gauge:
 `asset` (relation), `value`, `reading_type` (`hours` | `odometer` — copied
 from `items.meter` at capture time so each record is self-contained),
-`recorded_by` (free text), `photo` (the gauge, optional). Timestamp is the
-`created` autodate, same convention as movements.
+`recorded_by` (free text), `photo` (the gauge, optional), and `read_at`
+(ADR 0016 — the observation date, date-only UTC midnight, optional). The
+`created` autodate still records system-entry time; `read_at` is stamped
+at *capture* (asset.html sets today) so a reading taken offline carries
+its real read-day through the sync queue, not the sync-day. Same idea as
+inspections' `inspected_at`.
 
 Same mutability rules as movements — `updateRule`/`deleteRule` are `null`,
 corrections are new readings — because these numbers end up on equipment
 invoices and the history is what settles a dispute. Two derived answers,
-never stored: **latest reading** = newest record per asset, and the
-**lower-than-previous flag** = a reading smaller than its predecessor
-(meter replaced, or a typo — flagged in the UI at render time by comparing
-neighbors, accepted either way).
+never stored: **latest reading** = newest record per asset **ordered by
+`read_at`** (fallback `created`; the fetch sorts `-read_at,-created`), and
+the **lower-than-previous flag** = a reading smaller than its predecessor
+in that same order (meter replaced, or a typo — flagged in the UI at
+render time by comparing neighbors, accepted either way).
 
 ### inspection_requirements + inspections — compliance (ADR 0014)
 
