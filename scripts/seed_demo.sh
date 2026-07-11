@@ -198,7 +198,7 @@ A25=$(asset A025 "$PUMP3"  rented "Sunbelt Rentals" PO-4152 TP3-SB-8)
 api POST "collections/assets/records" \
   "{\"item\":\"$TRUCK\",\"tag_code\":\"A026\",\"ownership\":\"owned\",\"serial_number\":\"F350-2019-07\",\"assigned_to\":\"M. Castillo\"}"
 A26=$(rid)
-echo "  26 assets (5 rented, 1 assigned to a person)"
+echo "  26 assets (6 rented, 1 assigned to a person)"
 
 # Initial placements — everything arrives from outside the system
 for a in $A01 $A02 $A03 $A24; do place "$a" "" "$YARD" "R. Alvarez"; done
@@ -377,6 +377,28 @@ R8=$(resv "$A12" "T. Nguyen"   "$(d '+2 days')"  ""               "never mind, r
 api PATCH "collections/reservations/records/$R8" '{"status":"cancelled"}'
 echo "  8 reservations (4 open incl. 1 expired + 1 legacy empty-status, 2 fulfilled, 1 cancelled)"
 
+# ---- Rental on/off dates (ADR 0015) — dates in core, rates stay premium ------
+# on_rent_date = when the unit went on rent; off_rent_date = when it's due
+# back (empty = open-ended, nobody set a return). Date-only at UTC midnight,
+# the reservations convention. Owned gear leaves both empty. asset.html shows
+# the off-rent date on a rented asset, so a foreman scanning a lift sees when
+# it's due back — the demo covers the cases worth seeing: due-soon, PAST-DUE
+# (still on site, bleeding cost), and an idle open-ended rental with no
+# return date at all. Rates stay in the premium sidecar's terms file, never
+# here.
+rental() { # ASSET ON_RENT OFF_RENT("" = open-ended)
+  _off=${3:+\"$3 00:00:00\"}; _off=${_off:-null}
+  api PATCH "collections/assets/records/$1" \
+    "{\"on_rent_date\":\"$2 00:00:00\",\"off_rent_date\":$_off}"
+}
+rental "$A05" "$(d '-45 days')" "$(d '+9 days')"    # due back in 9 days; also reserved +4..+11
+rental "$A07" "$(d '-75 days')" "$(d '-5 days')"    # PAST DUE — still at WTP, held over from shutdown
+rental "$A09" "$(d '-60 days')" ""                  # open-ended, sitting idle in the yard
+rental "$A12" "$(d '-20 days')" "$(d '+14 days')"
+rental "$A19" "$(d '-30 days')" "$(d '+3 days')"    # comes off rent in 3 days
+rental "$A25" "$(d '-12 days')" "$(d '+25 days')"
+echo "  6 rentals dated (1 past-due A007, 1 open-ended A009); rates stay premium"
+
 # ---- Certs & inspections (ADR 0014) ------------------------------------------
 # Safety gear plus the three badge states the docs promise: RED (failed
 # harness), YELLOW (extinguisher due in 10 days), GREEN (freshly
@@ -436,6 +458,11 @@ echo "items) — vendor, PO, over/short/damaged notes, and two photographed"
 echo "packing slips (Pipe Supports and Precast Manhole Sections) in the"
 echo "photo appendix. po_number is free text a human typed; TrenchNote"
 echo "knows what arrived, never what was ordered."
+echo ""
+echo "The 6 rented assets carry on/off-rent dates (ADR 0015): scan A007 for"
+echo "a PAST-DUE rental or A019 (off rent in 3 days) — asset.html shows the"
+echo "countdown. A009 is deliberately open-ended (no return date), so it"
+echo "shows none. Dates live in core; rental RATES stay in the premium sidecar."
 echo ""
 echo "Note: all movement timestamps read 'now' — the public API cannot"
 echo "backdate an append-only ledger (that's a feature). Sequences and"

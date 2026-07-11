@@ -421,7 +421,11 @@ Deliveries also carry the receiving log (ADR 0013): every one has a
 `vendor_name` and `po_number`, two carry over/short/damaged notes, and
 two upload a real (placeholder) packing-slip photo via multipart — so
 `receiving.html` renders with evidence, including a PO that spans two
-items and a PO with two deliveries. It writes **only through the public
+items and a PO with two deliveries. The six rented assets carry
+on/off-rent dates (ADR 0015): one past-due, one due within a week, one
+open-ended with no return date — enough for `asset.html`'s off-rent
+countdown to show its overdue, due-soon, and absent states. It writes
+**only through the public
 API contract** ([API.md](API.md)), authenticated as an ordinary user,
 exactly as a sidecar would (ADR 0011) — which makes it a living contract
 test: if the seed script breaks, the contract moved.
