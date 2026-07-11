@@ -409,10 +409,14 @@ inspection requirements exercising all three badge colors (a failed
 harness, an extinguisher due in 10 days, a current gas monitor —
 possible because `inspected_at` is client-set, ADR 0014) — so sidecar
 and premium development runs against the real API instead of mock JSON.
-It writes **only through the public API contract** ([API.md](API.md)),
-authenticated as an ordinary user, exactly as a sidecar would (ADR 0011) —
-which makes it a living contract test: if the seed script breaks, the
-contract moved.
+Deliveries also carry the receiving log (ADR 0013): every one has a
+`vendor_name` and `po_number`, two carry over/short/damaged notes, and
+two upload a real (placeholder) packing-slip photo via multipart — so
+`receiving.html` renders with evidence, including a PO that spans two
+items and a PO with two deliveries. It writes **only through the public
+API contract** ([API.md](API.md)), authenticated as an ordinary user,
+exactly as a sidecar would (ADR 0011) — which makes it a living contract
+test: if the seed script breaks, the contract moved.
 
 ```sh
 # once: create a user in the admin UI (collections -> users), then

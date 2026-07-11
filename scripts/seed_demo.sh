@@ -51,7 +51,9 @@ if [ -z "$TN_EMAIL" ] || [ -z "$TN_PASSWORD" ]; then
 fi
 
 TMP="$(mktemp)"
-trap 'rm -f "$TMP"' EXIT
+SLIP="$TMP.slip.png"           # a real 1x1 PNG standing in for a photographed
+                               # packing slip (ADR 0013); generated below
+trap 'rm -f "$TMP" "$SLIP"' EXIT
 
 # ---- API helpers ------------------------------------------------------------
 # api METHOD path [json]  -> response body in $TMP; aborts loudly on non-2xx.
@@ -257,28 +259,61 @@ reading "$A26" 52240  odometer "M. Castillo"    # lower than previous -> flagged
 echo "  5 meter readings (1 flagged lower-than-previous)"
 
 # ---- Bulk movements: all three contract shapes -------------------------------
-# receive ITEM QTY TO WHO NOTE          (from empty  = delivery)
-# xfer    ITEM QTY FROM TO WHO          (both set    = transfer)
-# consume ITEM QTY FROM WHO NOTE        (to empty    = installed/used)
-receive() { api POST "collections/movements/records" \
-  "{\"item\":\"$1\",\"quantity\":$2,\"to_location\":\"$3\",\"moved_by\":\"$4\",\"note\":\"$5\"}"; MOVES=$((MOVES+1)); }
+# deliver  ITEM QTY TO WHO VENDOR PO [OSD]   (from empty = delivery/receive)
+# deliverf … same, plus a photographed packing slip (multipart upload)
+# xfer     ITEM QTY FROM TO WHO             (both set   = transfer)
+# consume  ITEM QTY FROM WHO NOTE           (to empty   = installed/used)
+#
+# Deliveries carry the receiving log (ADR 0013): vendor_name + po_number on
+# every one, an osd_note where something arrived short or damaged, and — on
+# the two that matter — a packing_slip photo, which IS the vendor-dispute
+# evidence. po_number is free text a human typed; TrenchNote never models a
+# purchase order. receiving.html prints all of this per item or per PO
+# (PO-1888 below spans two items; PO-1877 spans two deliveries).
 xfer() { api POST "collections/movements/records" \
   "{\"item\":\"$1\",\"quantity\":$2,\"from_location\":\"$3\",\"to_location\":\"$4\",\"moved_by\":\"$5\"}"; MOVES=$((MOVES+1)); }
 consume() { api POST "collections/movements/records" \
   "{\"item\":\"$1\",\"quantity\":$2,\"from_location\":\"$3\",\"moved_by\":\"$4\",\"note\":\"$5\"}"; MOVES=$((MOVES+1)); }
+deliver() { api POST "collections/movements/records" \
+  "{\"item\":\"$1\",\"quantity\":$2,\"to_location\":\"$3\",\"moved_by\":\"$4\",\"vendor_name\":\"$5\",\"po_number\":\"$6\",\"osd_note\":\"${7:-}\"}"; MOVES=$((MOVES+1)); }
+# A file rides along, so this one is multipart (curl -F) rather than the
+# JSON api() helper — exactly the request material.html sends for a
+# delivery with a photo. $SLIP_ARG (not $SLIP) is what curl reads: see the
+# cygpath note below.
+deliverf() {
+  _code=$(curl -s -o "$TMP" -w '%{http_code}' -X POST "$TN_URL/api/collections/movements/records" \
+    -H "Authorization: ${TOKEN:-}" \
+    -F "item=$1" -F "quantity=$2" -F "to_location=$3" -F "moved_by=$4" \
+    -F "vendor_name=$5" -F "po_number=$6" -F "osd_note=${7:-}" \
+    -F "packing_slip=@$SLIP_ARG;type=image/png")
+  case "$_code" in 2*) ;; *) echo "deliverf $1 failed (HTTP $_code):" >&2; cat "$TMP" >&2; echo >&2; exit 1 ;; esac
+  MOVES=$((MOVES+1))
+}
 
-# Deliveries into the yard/warehouse (the staging-yard black hole begins)
-receive "$B_SUP"   500 "$YARD" "R. Alvarez"  "PO-1877, packing slip 40021"
-receive "$B_BOLT"  800 "$SHOP" "J. Whitfield" "PO-1902"
-receive "$B_C900"  240 "$YARD" "R. Alvarez"  "PO-1888, 40ft sticks"
-receive "$B_MJ"     36 "$YARD" "R. Alvarez"  "PO-1888"
-receive "$B_TIES" 1200 "$SHOP" "J. Whitfield" "PO-1910"
-receive "$B_REBAR" 600 "$YARD" "R. Alvarez"  "PO-1895"
-receive "$B_SILT"   40 "$YARD" "R. Alvarez"  "PO-1881"
-receive "$B_HOSE"   60 "$SHOP" "J. Whitfield" "PO-1899"
-receive "$B_MH"     14 "$YARD" "R. Alvarez"  "PO-1871, precast delivery"
-receive "$B_GRAV"  120 "$YARD" "R. Alvarez"  "ticket 55810"
-receive "$B_SUP"   200 "$YARD" "R. Alvarez"  "PO-1877 backorder"
+# The stand-in packing slip: a valid (tiny) PNG, because PocketBase
+# content-sniffs uploaded files and rejects anything that isn't an image.
+printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' | base64 -d > "$SLIP"
+# The shell wrote $SLIP as an MSYS path (/tmp/...); on Git Bash, curl is
+# native Windows curl and can't open that path when it's buried in a
+# -F @file argument (it fails with exit 26). cygpath hands it a Windows
+# path instead. Everywhere else cygpath is absent and the /tmp path is
+# read natively — so this line is a no-op off Windows.
+SLIP_ARG="$SLIP"
+command -v cygpath >/dev/null 2>&1 && SLIP_ARG="$(cygpath -m "$SLIP")"
+
+# Deliveries into the yard/warehouse (the staging-yard black hole begins).
+# Two carry photographed slips + damage notes — the dispute evidence.
+deliverf "$B_SUP"  500 "$YARD" "R. Alvarez"   "Ferguson Waterworks" "PO-1877"
+deliver  "$B_BOLT" 800 "$SHOP" "J. Whitfield" "Fastenal"            "PO-1902"
+deliver  "$B_C900" 240 "$YARD" "R. Alvarez"   "Core & Main"         "PO-1888" "240 sticks per slip; 3 cracked at the bell, set aside for return"
+deliver  "$B_MJ"    36 "$YARD" "R. Alvarez"   "Core & Main"         "PO-1888"
+deliver  "$B_TIES" 1200 "$SHOP" "J. Whitfield" "White Cap"          "PO-1910"
+deliver  "$B_REBAR" 600 "$YARD" "R. Alvarez"  "CMC Rebar"           "PO-1895"
+deliver  "$B_SILT"  40 "$YARD" "R. Alvarez"   "SiteOne"             "PO-1881"
+deliver  "$B_HOSE"  60 "$SHOP" "J. Whitfield" "United Rentals"      "PO-1899"
+deliverf "$B_MH"    14 "$YARD" "R. Alvarez"   "Oldcastle Precast"   "PO-1871" "14 sections per slip; MH-4-3 spalled at the joint — photographed, flagged to vendor"
+deliver  "$B_GRAV" 120 "$YARD" "R. Alvarez"   "Martin Marietta"     "ticket 55810"
+deliver  "$B_SUP"  200 "$YARD" "R. Alvarez"   "Ferguson Waterworks" "PO-1877" "second release against PO-1877"
 
 # Transfers out to the jobs
 xfer "$B_SUP"   120 "$YARD" "$WWTP" "D. Okafor"
@@ -295,7 +330,7 @@ xfer "$B_BOLT"  200 "$SHOP" "$WWTP" "D. Okafor"
 xfer "$B_SUP"    40 "$WWTP" "$LS4"  "M. Castillo"   # site-to-site borrow
 xfer "$B_HOSE"   10 "$LS4"  "$FM12" "M. Castillo"
 xfer "$B_GRAV"   20 "$YARD" "$LS4"  "M. Castillo"
-receive "$B_GRAV" 60 "$YARD" "R. Alvarez" "ticket 55977"
+deliver "$B_GRAV" 60 "$YARD" "R. Alvarez" "Martin Marietta" "ticket 55977"
 
 # Consumed / installed — leaves stock, stays in the ledger
 consume "$B_SUP"    95 "$WWTP" "D. Okafor"   "installed, digester 3 gallery"
@@ -394,6 +429,13 @@ echo "recently-moved feed, and meter readings on A006/A008/A026 (A026's"
 echo "odometer history includes a flagged lower-than-previous entry)."
 echo "The Inspections panel should flag A027 (RED, failed harness) and"
 echo "A028 (YELLOW, extinguisher visual due in 10 days); A029 is green."
+echo ""
+echo "Deliveries carry the receiving log: open receiving.html?item=<id> for"
+echo "any bulk material (or receiving.html?po=PO-1888 to see one PO span two"
+echo "items) — vendor, PO, over/short/damaged notes, and two photographed"
+echo "packing slips (Pipe Supports and Precast Manhole Sections) in the"
+echo "photo appendix. po_number is free text a human typed; TrenchNote"
+echo "knows what arrived, never what was ordered."
 echo ""
 echo "Note: all movement timestamps read 'now' — the public API cannot"
 echo "backdate an append-only ledger (that's a feature). Sequences and"
