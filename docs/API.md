@@ -71,6 +71,12 @@ Highlights that are load-bearing for API clients:
 - **`tag_code` is permanent** once printed on a label (ADR 0010): unique,
   never recycled onto different gear. QR labels encode
   `{Base URL}/asset.html?code={tag_code}`.
+- **Rental dates (ADR 0015):** `assets.on_rent_date` and
+  `assets.off_rent_date` are optional `date` fields (empty on owned gear),
+  stored date-only at UTC midnight — format in UTC. Dates are a
+  non-commercial fact about the asset and live in core; the *rate* does
+  not (that stays with whatever tool prices the rental). Added in migration
+  `1783468816`; **additive to contract v1** (see Versioning).
 - **`readings` is an append-only ledger** (ADR 0012), same rules as
   movements: no updates, no deletes, corrections are new records. A
   reading is `asset` + `value` + `reading_type` (`hours` | `odometer`) +
@@ -157,9 +163,9 @@ disabled, so accounts are created by the admin in the PocketBase UI.
   fields, changed rules, changed URL patterns) require an ADR and bump this
   document's version, announced in release notes.
 - Contract v1 as published here reflects the schema through migration
-  `1783468815` (readings — ADR 0012; certs & inspections — ADR 0014;
-  receiving log — ADR 0013; all additive: new collections and optional
-  fields only).
+  `1783468816` (readings — ADR 0012; certs & inspections — ADR 0014;
+  receiving log — ADR 0013; rental dates — ADR 0015; all additive: new
+  collections and optional fields only).
 - Core is currently developed and tested against **PocketBase 0.39.x**
   (pin with `PB_VERSION=0.39.6 ./scripts/setup.sh`). A PocketBase upgrade
   that changes REST behavior is treated as a breaking change and handled

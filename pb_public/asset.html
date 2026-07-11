@@ -76,6 +76,11 @@
   }
   .badge.rented { color: var(--rent); }
   .badge.owned  { color: var(--steel); }
+  /* Off-rent countdown (ADR 0015): quiet by default, amber within a week,
+     red once overdue. */
+  .off-rent { margin-top: 6px; font-size: 14px; font-weight: 700; color: var(--steel); }
+  .off-rent.soon    { color: var(--rent); }
+  .off-rent.overdue { color: #a1160a; }
 
   img.photo {
     width: 100%; margin-top: 14px;
@@ -304,6 +309,11 @@
             x-text="asset.ownership === 'rented'
                     ? ('RENTED — ' + (asset.vendor || 'vendor n/a'))
                     : 'COMPANY OWNED'"></span>
+
+      <!-- Off-rent countdown, rented + date-set only (ADR 0015) -->
+      <template x-if="offRent">
+        <p class="off-rent" :class="offRent.cls" x-text="offRent.text"></p>
+      </template>
 
       <template x-if="photoUrl">
         <img class="photo" :src="photoUrl" alt="Asset photo">
@@ -752,6 +762,23 @@ function assetPage() {
       // Format in UTC too, or western timezones would show the day before.
       return new Date(pbDate).toLocaleDateString(undefined,
         { month: 'short', day: 'numeric', timeZone: 'UTC' });
+    },
+
+    // Off-rent countdown for a rented asset (ADR 0015). Display only —
+    // the date is set office-side in the admin UI, like vendor/PO. The
+    // rate (and thus overrun cost) stays premium-side; core just shows
+    // WHEN it's due back. Whole-day diff at UTC to match the storage.
+    get offRent() {
+      const off = this.asset?.off_rent_date;
+      if (this.asset?.ownership !== 'rented' || !off) return null;
+      const today = Date.parse(new Date().toISOString().slice(0, 10) + 'T00:00:00Z');
+      const days = Math.round((Date.parse(off.slice(0, 10) + 'T00:00:00Z') - today) / 86400000);
+      const when = this.fmtDate(off);
+      if (days < 0) {
+        return { cls: 'overdue', text: `Off rent ${when} — ${-days} day${-days === 1 ? '' : 's'} OVERDUE` };
+      }
+      if (days === 0) return { cls: 'soon', text: `Off rent TODAY (${when})` };
+      return { cls: days <= 7 ? 'soon' : '', text: `Off rent ${when} — in ${days} day${days === 1 ? '' : 's'}` };
     },
 
     get photoUrl() {
