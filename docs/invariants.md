@@ -34,8 +34,8 @@ data error rather than being clamped to zero.
 ### User-facing ledger corrections append facts
 
 **CONFIRMED CURRENT:** authenticated application clients cannot update or delete
-movements, readings, or inspections. A correction is a later record that leaves
-the original evidence visible.
+movements, readings, inspections, condition reports, or condition resolutions.
+A correction is a later record that leaves the original evidence visible.
 
 Current caveat: PocketBase superusers bypass collection API rules. Therefore
 this is an application/client invariant and operating rule, not cryptographic
@@ -52,6 +52,13 @@ Offline replay must preserve the observation date.
 **CONFIRMED CURRENT:** due dates and RED/YELLOW/GREEN standing are calculated
 from `inspection_requirements` and `inspections` by
 `pb_public/tn-inspect.js`. No client writes a compliance-status field.
+
+### Derived damage status is not stored
+
+**CONFIRMED CURRENT:** an asset is damaged when at least one damage report has
+no related condition resolution. Neither `assets` nor `condition_reports`
+carries an open/damaged status field. Wear and condition-note records do not
+affect the badge.
 
 ### Requirements cannot satisfy another asset
 

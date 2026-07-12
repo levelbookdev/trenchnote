@@ -63,7 +63,7 @@ Do not change these without explicit approval from the maintainer.
   as sole copyright holder (or use a CLA for outside contributors) so a paid
   managed-hosting tier remains possible later.
 
-## Data model — 8 collections
+## Data model — 10 collections
 
 Schema lives in `pb_migrations/` as versioned PocketBase JS migrations, NOT as
 hand-built collections in the admin UI. A fresh self-hoster must be able to
@@ -144,6 +144,16 @@ reproduce the entire database from the repo.
   removed, past due, or no pass on record; YELLOW = due within 14 days (a
   code constant, not a setting); GREEN = all current; no badge = no
   requirements. Nothing about compliance is ever stored.
+- **`condition_reports`** — append-only photographed observations (ADR 0019):
+  `asset`, `report_type` (`damage` | `wear` | `condition_note`), required
+  `description`, required single `photo`, `reported_by`, and server-set
+  `created`. `condition_note` documents good condition at rental delivery or
+  before return without marking the asset damaged.
+- **`condition_resolutions`** — append-only human outcomes (ADR 0019):
+  `report`, `resolution` (`repaired` | `accepted_as_is` | `disposed` |
+  `returned_to_vendor`), `note`, `resolved_by`, and server-set `created`.
+  **DAMAGED is derived**: any damage report without a related resolution.
+  No damaged/open status is stored.
 
 ### Model principles
 
@@ -244,6 +254,10 @@ with auth-required rules from day one.
   (ADR 0014). It records inspections; it does not schedule work, assign
   inspectors, or constitute compliance. If a feature request needs workflow
   — assignments, approvals, escalations — the answer is no.
+- **No repair work orders or maintenance management** (ADR 0019). Condition
+  reports record photo evidence and a human resolution only — no mechanic
+  assignments, maintenance scheduling, labor/parts/cost tracking, or approval
+  workflow.
 - No multi-tenant shared-database complexity. The future SaaS tier is one
   PocketBase instance per customer (Vikunja-style), which is simpler and safer.
 - No multi-master sync between instances. Deployment is one writable VPS with

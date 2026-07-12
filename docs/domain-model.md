@@ -75,7 +75,7 @@ authority and does not record mail delivery state.
 | Human identifier | Unique permanent `tag_code`; optional serial number |
 | Mutability | Authenticated create/update; superuser-only delete |
 | Lifecycle | Registered, labeled, moved, optionally rented/assigned/read/inspected; no retirement state exists |
-| Relationships | Belongs to item; caches current location; has movements, reservations, readings, requirements, and inspections |
+| Relationships | Belongs to item; caches current location; has movements, reservations, readings, requirements, inspections, and condition reports |
 | Evidence | Evidence is attached to related ledgers, not directly to the asset |
 | Import/export relevance | `tag_code` is the strongest current handoff candidate; asset records are API contract |
 | Status | **CURRENT** |
@@ -185,6 +185,43 @@ approve a standard, or prove legal compliance.
 `inspected_at` is the field observation date; `created` is server entry time.
 RED/YELLOW/GREEN standing is derived and is not a field on this entity.
 
+### Condition report
+
+| Property | CURRENT model |
+| --- | --- |
+| Purpose | Records photographed damage, wear, or a condition note on one asset |
+| Authoritative owner | TrenchNote condition evidence ledger |
+| Key identifier | PocketBase `id` |
+| Human identifier | Asset tag, report type, reporter text, and timestamp |
+| Mutability | Create-only for authenticated clients; administrative superuser access remains possible |
+| Lifecycle | Appended once; corrections are later reports; may be referenced by resolutions |
+| Relationships | Belongs to one asset; may have zero or more resolution rows |
+| Evidence | Required description and one required photo |
+| Import/export relevance | Included in API contract; no dedicated export envelope |
+| Status | **CURRENT** |
+
+The server-set `created` timestamp is the shared-ledger arrival time. A
+`condition_note` can document good rental condition without implying damage.
+
+### Condition resolution
+
+| Property | CURRENT model |
+| --- | --- |
+| Purpose | Records a human-stated outcome for one condition report |
+| Authoritative owner | TrenchNote condition resolution ledger |
+| Key identifier | PocketBase `id` |
+| Human identifier | Report, resolution type, resolver text, and timestamp |
+| Mutability | Create-only for authenticated clients; administrative superuser access remains possible |
+| Lifecycle | Appended once; additional outcomes remain legal and visible |
+| Relationships | Belongs to one condition report |
+| Evidence | Optional note; original photo remains on the report |
+| Import/export relevance | Included in API contract; no work-order relationship exists |
+| Status | **CURRENT** |
+
+A resolution records `repaired`, `accepted_as_is`, `disposed`, or
+`returned_to_vendor`. It is evidence of a human outcome, not maintenance
+workflow or approval to operate.
+
 ## Current derived concepts
 
 | Concept | Derivation | Status |
@@ -197,6 +234,7 @@ RED/YELLOW/GREEN standing is derived and is not a field on this entity.
 | Reading decrease warning | Compare consecutive derived reading order | **CURRENT** |
 | Inspection next due | Latest passing observation plus `interval_days` | **CURRENT** |
 | Asset inspection badge | Worst derived requirement/inspection condition | **CURRENT** |
+| Asset damage badge | At least one damage report has no related resolution | **CURRENT** |
 | Open reservation | `status` is empty or `open` | **CURRENT** |
 
 ## Concepts not present in the current model

@@ -13,7 +13,7 @@ origin that serves the pages (e.g. `http://192.168.1.50:8090`).
 
 ## Contract collections
 
-These eight collections — their fields, semantics, and the operations marked
+These ten collections — their fields, semantics, and the operations marked
 allowed — are stable. A breaking change to any of them requires a new ADR
 and a version bump of this contract, announced in the release notes.
 
@@ -27,6 +27,8 @@ and a version bump of this contract, announced in the release notes.
 | `readings` | ✔ contract | ✔ | **never** | **never** |
 | `inspection_requirements` | ✔ contract | ✔ | ✔ | admin-only |
 | `inspections` | ✔ contract | ✔ (see asset-match rule) | **never** | **never** |
+| `condition_reports` | ✔ contract | ✔ (photo required) | **never** | **never** |
+| `condition_resolutions` | ✔ contract | ✔ | **never** | **never** |
 
 Field-level shapes are defined by the migrations in `pb_migrations/` and
 explained in the [developer guide](DEVELOPER_GUIDE.md#data-model).
@@ -126,6 +128,19 @@ Highlights that are load-bearing for API clients:
   treat a requirement with no passing inspection as not current, and an
   asset whose latest inspection on any requirement is `fail`/
   `removed_from_service` as out of service.
+- **Damage and condition evidence** (ADR 0019) is split across two
+  append-only ledgers. `condition_reports` is `asset` + `report_type`
+  (`damage` | `wear` | `condition_note`) + required `description`, required
+  `photo` (one image), and required free-text `reported_by`; `created` is the
+  server timestamp. `condition_resolutions` is `report` + `resolution`
+  (`repaired` | `accepted_as_is` | `disposed` |
+  `returned_to_vendor`) + optional `note` + required free-text `resolved_by`.
+  Neither collection permits update or delete by an ordinary authenticated
+  client. **DAMAGED is derived**, never stored: a damage report is open when
+  no resolution references it; an asset is damaged when any of its damage
+  reports is open. Wear and condition-note reports do not affect that badge.
+  Multiple resolution rows are legal; any one closes the report for the
+  derivation while all remain in history.
 
 ## Other contract surface
 
@@ -171,10 +186,10 @@ disabled, so accounts are created by the admin in the PocketBase UI.
   fields, changed rules, changed URL patterns) require an ADR and bump this
   document's version, announced in release notes.
 - Contract v1 as published here reflects the schema through migration
-  `1783468818` (readings — ADR 0012; certs & inspections — ADR 0014;
+  `1783468820` (readings — ADR 0012; certs & inspections — ADR 0014;
   receiving log — ADR 0013; rental dates — ADR 0015; reading observation
-  date — ADR 0016; item code — ADR 0018; all additive: new collections and
-  optional fields only).
+  date — ADR 0016; item code — ADR 0018; damage & condition reports — ADR
+  0019; all additive: new collections and optional fields only).
 - Core is currently developed and tested against **PocketBase 0.39.x**
   (pin with `PB_VERSION=0.39.6 ./scripts/setup.sh`). A PocketBase upgrade
   that changes REST behavior is treated as a breaking change and handled

@@ -47,7 +47,7 @@ trenchnote/
 
 ## Data model
 
-Eight collections, created by the migrations in `pb_migrations/` (one file
+Ten collections, created by the migrations in `pb_migrations/` (one file
 per collection, plus later alterations). PocketBase applies pending migrations
 automatically at startup, in filename order — a fresh clone reproduces the
 whole database on first `serve`.
@@ -208,6 +208,29 @@ tn-auth.js (asset page and dashboard must give the same do-not-use
 verdict; see the file header for the exact rules). No status column
 exists. Requirement starters live in
 [inspection-seeds.md](inspection-seeds.md) — examples, not advice.
+
+### condition_reports + condition_resolutions — photo evidence (ADR 0019)
+
+`condition_reports` is an append-only observation ledger: `asset`,
+`report_type` (`damage` | `wear` | `condition_note`), required
+`description`, one **required** image `photo`, and required free-text
+`reported_by`. `condition_resolutions` is a second append-only outcome ledger:
+`report`, `resolution` (`repaired` | `accepted_as_is` | `disposed` |
+`returned_to_vendor`), optional `note`, and required free-text `resolved_by`.
+Both use server-set `created` as their timestamp and reject update/delete for
+ordinary authenticated clients.
+
+The derived rule is a set difference, not a column on `assets`: select damage
+reports for an asset, subtract every report id referenced by any resolution,
+and show **DAMAGED** when anything remains. Wear and `condition_note` records
+are evidence only. Multiple resolutions are legal because two offline phones
+may both record a true outcome; any one closes the report for badge purposes,
+and all remain in the history.
+
+The required-photo rule is enforced by the collection schema. This module's
+purpose is dispute evidence, so a text-only report is incomplete. It does not
+grow repair work orders, maintenance schedules, labor/parts/cost tracking, or
+return-to-service approval; report and resolve are the entire lifecycle.
 
 ## The two invariants
 
@@ -382,7 +405,7 @@ TrenchNote is open-core: this AGPL repo is complete and self-sufficient,
 and any paid tooling lives *outside* it, talking to PocketBase's REST API
 like any other client would
 ([ADR 0011](adr/0011-core-premium-extension-boundary.md)). The practical
-consequence for anyone working here: the eight collections' shapes and rules
+consequence for anyone working here: the ten collections' shapes and rules
 are a published contract ([API.md](API.md)), so breaking changes to them
 need an ADR and a contract version bump — not just a migration. Nothing in
 this repo may ever reference, detect, or depend on premium code.

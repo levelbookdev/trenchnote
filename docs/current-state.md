@@ -22,8 +22,8 @@ architecture documentation:
 **CURRENT:** TrenchNote is a self-hostable field-logistics ledger for physical
 equipment and bulk materials. It answers what a thing is, where it is, and who
 moved it. It also records supporting field facts that belong at that same scan
-point: reservations, meter readings, receiving evidence, and asset inspection
-observations.
+point: reservations, meter readings, receiving evidence, asset inspection
+observations, and photographed condition evidence.
 
 The application is usable as a standalone system. No paid service or sibling
 application is required for field execution, data retention, or the exports
@@ -66,7 +66,7 @@ PocketBase serves the frontend and API from the same origin. Frontend code uses
 ## Current collections
 
 The complete schema is reproducible from the ordered migrations in
-`pb_migrations/`. There are eight application collections.
+`pb_migrations/`. There are ten application collections.
 
 | Collection | CURRENT purpose | Authority and mutability |
 | --- | --- | --- |
@@ -78,6 +78,8 @@ The complete schema is reproducible from the ordered migrations in
 | `readings` | Meter or odometer observation for one asset | Authoritative ledger; create-only for authenticated users; superusers retain administrative access |
 | `inspection_requirements` | Recurring obligation attached to one asset | Mutable catalog-like data; authenticated create/update; superuser-only delete |
 | `inspections` | Pass, fail, or removed-from-service observation | Authoritative ledger; create-only for authenticated users; superusers retain administrative access |
+| `condition_reports` | Photographed damage, wear, or condition observation | Authoritative ledger; create-only for authenticated users; superusers retain administrative access |
+| `condition_resolutions` | Human-stated outcome for a condition report | Authoritative ledger; create-only for authenticated users; superusers retain administrative access |
 
 The server enforces the asset-versus-bulk movement shape and requires an
 inspection requirement, when supplied, to belong to the inspected asset.
@@ -93,6 +95,9 @@ inspection requirement, when supplied, to belong to the inspected asset.
 - An `inspections` record is the authoritative inspection observation.
   `inspected_at` is client-set so offline and back-entered records retain the
   field date; `created` records when the server received it.
+- A `condition_reports` record is a photographed field observation, and a
+  `condition_resolutions` record is a later outcome. Both retain their original
+  rows and use server entry time.
 - Receiving photos, packing slips, vendor text, and OS&D notes are evidence on
   the receive-shaped movement itself, not a separate delivery record.
 
@@ -105,6 +110,8 @@ inspection requirement, when supplied, to belong to the inspected asset.
 - Current job is the current location's `job_code`.
 - Latest meter reading is selected by observation date, then entry time.
 - Inspection status and next-due date are derived by `pb_public/tn-inspect.js`.
+- Damage standing is damage reports minus reports referenced by any condition
+  resolution; no damaged/open flag is stored.
 - Reservation status is not derived; a person explicitly fulfills or cancels
   the claim.
 
@@ -187,10 +194,11 @@ requests, and calls `auth-refresh` on page load. This refresh is also the
 expiry check because PocketBase may return an empty `200` list to a guest
 instead of `401`.
 
-The movement, reading, and inspection collections are append-only for normal
-authenticated clients. PocketBase superusers are outside collection API rules,
-so current immutability is an operational and client-level guarantee, not a
-cryptographic or absolute database guarantee.
+The movement, reading, inspection, condition-report, and condition-resolution
+collections are append-only for normal authenticated clients. PocketBase
+superusers are outside collection API rules, so current immutability is an
+operational and client-level guarantee, not a cryptographic or absolute
+database guarantee.
 
 ## Current deployment topology and status
 

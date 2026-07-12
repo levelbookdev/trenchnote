@@ -46,7 +46,10 @@ facts captured about the same physical subject at the same field touchpoint.
 - record meter/odometer observations associated with a physical asset;
 - record recurring inspection requirements and inspection observations for a
   physical asset; and
-- show inspection attention as a derived visibility aid.
+- show inspection attention as a derived visibility aid;
+- record photographed damage, wear, and rental condition observations; and
+- record a human resolution while deriving unresolved damage from the two
+  append-only ledgers.
 
 TrenchNote may preserve an **installation reference** in a movement note or by
 transferring material to an operator-created “Installed — …” location. That is
@@ -62,6 +65,8 @@ installation quality, acceptance, startup, or turnover.
 - vendor API integrations;
 - construction scheduling or lookahead planning;
 - inspection assignments, approvals, escalations, or a company safety program;
+- repair work orders, mechanic assignments, maintenance scheduling,
+  return-to-service approval, parts/labor tracking, or repair costs;
 - installation acceptance, test procedures, service clearance, startup,
   functional testing, training approval, or turnover packages;
 - a general form builder, workflow engine, document-management system, ERP, or
@@ -140,6 +145,8 @@ approved by this document. See
   projects, cost codes, or billing.
 - `readings` must remain observed values, not calculate rates, invoices, or
   equipment charges.
+- Condition reports and resolutions must remain evidence, not become work
+  orders, maintenance plans, mechanic dispatch, or cost records.
 - `assets.current_location` must remain a cache and must not displace the
   movement ledger.
 - Receiving reports must remain evidence about what arrived, not compare

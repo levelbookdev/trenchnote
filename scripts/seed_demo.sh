@@ -399,6 +399,44 @@ rental "$A19" "$(d '-30 days')" "$(d '+3 days')"    # comes off rent in 3 days
 rental "$A25" "$(d '-12 days')" "$(d '+25 days')"
 echo "  6 rentals dated (1 past-due A007, 1 open-ended A009); rates stay premium"
 
+# ---- Damage & condition reports (ADR 0019) ----------------------------------
+# A report always carries one required photo, so these writes use multipart.
+# The same tiny valid PNG used for receiving-demo evidence stands in for a
+# camera photo. `created` remains server-assigned and append-only.
+condition_report() { # ASSET TYPE WHO DESCRIPTION -> id
+  _code=$(curl -s -o "$TMP" -w '%{http_code}' -X POST "$TN_URL/api/collections/condition_reports/records" \
+    -H "Authorization: ${TOKEN:-}" \
+    -F "asset=$1" -F "report_type=$2" -F "reported_by=$3" \
+    -F "description=$4" -F "photo=@$SLIP_ARG;type=image/png")
+  case "$_code" in
+    2*) ;;
+    *) echo "condition report $1 failed (HTTP $_code):" >&2
+       cat "$TMP" >&2; echo >&2; exit 1 ;;
+  esac
+  rid
+}
+resolve_condition() { # REPORT RESOLUTION WHO NOTE
+  api POST "collections/condition_resolutions/records" \
+    "{\"report\":\"$1\",\"resolution\":\"$2\",\"resolved_by\":\"$3\",\"note\":\"$4\"}"
+}
+
+# One open damage report drives the dashboard and DAMAGED badge.
+condition_report "$A10" damage "D. Okafor" \
+  "Generator receptacle cover cracked and will not stay closed" >/dev/null
+
+# One resolved damage report remains visible in both append-only ledgers.
+RESOLVED_DAMAGE=$(condition_report "$A11" damage "M. Castillo" \
+  "Pull cord frayed after dewatering shift")
+resolve_condition "$RESOLVED_DAMAGE" repaired "J. Whitfield" \
+  "Replaced cord and test-started at the shop"
+
+# Rental delivery evidence: two angles, each its own timestamped report.
+condition_report "$A05" condition_note "D. Okafor" \
+  "Rental delivery: front and left side clean; no visible panel damage" >/dev/null
+condition_report "$A05" condition_note "D. Okafor" \
+  "Rental delivery: platform controls and hour meter photographed" >/dev/null
+echo "  4 condition reports (1 open damage, 1 resolved, 2 rental delivery photos)"
+
 # ---- Certs & inspections (ADR 0014) ------------------------------------------
 # Safety gear plus the three badge states the docs promise: RED (failed
 # harness), YELLOW (extinguisher due in 10 days), GREEN (freshly
@@ -467,3 +505,7 @@ echo ""
 echo "Note: all movement timestamps read 'now' — the public API cannot"
 echo "backdate an append-only ledger (that's a feature). Sequences and"
 echo "reservation dates carry the demo's history instead."
+echo ""
+echo "Condition evidence (ADR 0019): A010 has one open damage report; A011"
+echo "has a damage report resolved as repaired; rented A005 has two delivery-"
+echo "condition photos. Report and resolution rows are both append-only."
