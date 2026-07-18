@@ -114,7 +114,7 @@ SHOP=$(loc "Shop & Warehouse" warehouse)
 WWTP=$(loc "Bear Creek WWTP Expansion" jobsite 6054.2 pm.bearcreek@example.com)
 LS4=$(loc "Millbrook Lift Station 4" jobsite 6101 pm.millbrook@example.com)
 FM12=$(loc "Hwy 12 Force Main" jobsite 6088)
-WTP=$(loc "Cedar Falls WTP Clearwell" jobsite 6042.1 pm.cedarfalls@example.com)
+WTP=$(loc "Example WTP Clearwell" jobsite 6042.1 pm.example@example.com)
 echo "  6 locations (4 with job codes, 3 with off-site notify emails)"
 
 # ---- Items: unique (assets hang off these) + bulk ---------------------------
