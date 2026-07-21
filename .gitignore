@@ -8,6 +8,9 @@ pocketbase_*.zip
 # not source code. The schema lives in pb_migrations/ (which IS committed).
 pb_data/
 
+# Throwaway database created and deleted by scripts/smoke_test.sh.
+pb_data_smoke/
+
 # OS noise
 .DS_Store
 Thumbs.db

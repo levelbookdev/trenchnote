@@ -220,7 +220,11 @@ trenchnote/
 │   ├── manifest.json      # PWA manifest (+ icon-192/512.png)
 │   └── vendor/            # vendored alpine.min.js, qrcode.min.js
 └── scripts/
-    └── setup.sh           # download the right PocketBase binary for the OS
+    ├── setup.sh           # download the right PocketBase binary for the OS
+    ├── seed_demo.sh       # fill a local instance with fake demo data
+    └── smoke_test.sh      # regression gate: fresh DB + seed + invariant
+                           # assertions over the REST API. Run before any
+                           # migration lands, any tag, any deploy.
 ```
 
 Committed: source, migrations, vendored libs, docs.

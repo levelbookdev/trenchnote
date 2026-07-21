@@ -524,8 +524,52 @@ limitation, by design: the API cannot backdate `created`, so all seeded
 movements are stamped "now"; history lives in the sequences and the
 reservation dates.
 
-The pages have no automated test suite; the current verification workflow is
-exercising the API with `curl` (create → move → check the ledger), running the
-deployment preflight/live checks, and exercising the pages and offline replay in
-a browser. Keep the source readable and the field payload small; add automation
-where repeated failures justify its maintenance cost.
+### The smoke test — the regression gate
+
+`scripts/smoke_test.sh` is the automated gate. Run it before you tag, before
+you deploy, and before you land anything that touches a migration:
+
+```sh
+./scripts/smoke_test.sh
+TN_TEST_PORT=8500 ./scripts/smoke_test.sh   # if 8399 is busy
+```
+
+Exit `0` = green, `1` = an invariant regressed, `2` = setup failure (no
+`pocketbase` binary, port occupied, seed aborted). It needs `curl`, `awk`,
+and GNU `date`.
+
+What it does, in order: boots a **fresh** PocketBase from `pb_migrations/`
+into a throwaway, gitignored `pb_data_smoke/` (deleted on exit — your real
+`pb_data/` is never touched), bootstraps a superuser, creates one ordinary
+user, runs the whole of `seed_demo.sh` against it, and then asserts ~87
+things through the public REST API. It writes **only** through that API,
+exactly as a phone in a dirt lot does. No `pb_data/` surgery.
+
+What it asserts, and why each one is there:
+
+| Check | The regression it catches |
+| --- | --- |
+| All 14 collections answer | A migration that throws on load leaves its collection missing while the server still boots fine |
+| Anonymous writes refused; no self-signup | The auth lockdown (ADR 0004) reverted, or `users.createRule` reopened |
+| Anonymous reads see **0** in every collection, against a *full* database | A `listRule` accidentally reverted to public. Note PocketBase answers an unsatisfied `listRule` with `200` + an empty list, **not** `401` — so "denied" is proved by an empty count, never a status code |
+| Every ledger refuses `PATCH` and `DELETE` | Append-only loosened — `movements`, `readings`, `inspections`, `condition_reports`, `condition_resolutions`, `container_events`, `kit_audits` |
+| Movement shape rules: no asset move without a destination, no zero-quantity bulk move, no locationless bulk move, no hybrid asset+item row | The `createRule` XOR (migrations `1783468805`–`1783468807`) weakened — a replayed offline queue or a bad sidecar writing movements that mean nothing |
+| Asset move writes the ledger, *then* the `current_location` cache reads back updated | Invariant 1 above broken |
+| Bulk stock: receive 100, consume 30, transfer 20 → yard 50, site 20, division total 70 | Invariant 2 above broken. The test derives stock from the raw ledger itself, the same in-minus-out sum the pages do |
+| Over-consuming is **accepted** and derives a negative balance | Someone "fixing" negative stock by blocking the write. Refusing it just teaches crews to log nothing (ADR 0005) |
+| A reservation cannot be created already `fulfilled`/`cancelled`; empty status counts as open; a human can close one | ADR 0007 — and the "not closed" filter regressing to `= open`, which would hide every pre-status row |
+| An inspection cannot borrow another asset's requirement | ADR 0014 — this is what stops a DO-NOT-USE badge going green on a machine nobody looked at |
+| Gang Box: no box inside a box, no adding an asset that is somewhere else | Contained assets derive location from the box; a nested or teleported membership corrupts that derivation |
+
+Two habits keep it honest. **Assert both directions**: every "this is
+refused" is paired with a "this is still accepted," because a rule that
+denies everything passes half a test suite while breaking the product. And
+**never skip an assertion silently** — if a collection has no record to
+tamper with, the script fails rather than `continue`ing, since a silently
+skipped check is exactly the blind spot the gate exists to remove.
+
+Beyond the gate, verification is still the deployment preflight/live checks
+(`docs/DEPLOY.md`) and exercising the pages and offline replay in a real
+browser — the smoke test covers the API and the invariants, not the UI.
+Keep the source readable and the field payload small; add automation where
+repeated failures justify its maintenance cost.
