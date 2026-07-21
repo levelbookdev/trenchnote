@@ -122,10 +122,10 @@ avoidable migration or compatibility cost.
 
 | Field | Detail |
 | --- | --- |
-| Why it matters | Public production is behind repository `main`, and no automated regression suite protects the catch-up migration. |
+| Why it matters | Public production is behind repository `main`, and the catch-up migration must not regress the invariants. |
 | Options | Manual runbook only; scripted API/migration smoke gate; browser automation; staged release/versioning process. |
-| Current evidence | Live service is healthy at service-worker `v6`; repository is `v15`; current receiving/inspection features are absent live. Preflight and live-verify scripts exist. |
-| Recommendation | Add a repeatable migration/API/offline smoke checklist before the live catch-up. Introduce heavier automation only where repeated failures justify it. |
+| Current evidence | Live service is healthy at service-worker `v6`; repository is `v18`; the inspections, manifests, condition-report, and Gang Box collections are absent live. `scripts/smoke_test.sh` now provides the scripted API/migration smoke gate; `deploy/preflight.sh` and `deploy/verify-live.sh` exist. |
+| Recommendation | Run `scripts/smoke_test.sh` and the deploy preflight before the live catch-up. Browser automation remains optional — add it only where repeated failures justify it. |
 | Validate | Backup off-box, restore rehearsal, schema migration on a data copy, page titles, auth, offline replay, files, and rollback. |
 | Decision owner | Maintainer/deployment operator. |
 | Latest safe decision point | Before applying current migrations to the live ledger. |

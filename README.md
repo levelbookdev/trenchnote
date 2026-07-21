@@ -22,9 +22,10 @@ TrenchNote answers three questions and refuses to be anything else:
 
 TrenchNote is working field software under active development. The committed
 schema and UI cover the workflows described below, and a public PocketBase
-instance is deployed, but there are no release tags or formal maturity level and
-no automated regression suite yet. The public deployment may lag `main`; see the
-dated [current-state report](docs/current-state.md) before planning an update.
+instance is deployed. An automated regression gate (`scripts/smoke_test.sh`)
+guards the migrations, API access rules, and derived calculations. The public
+deployment may lag `main`; see the dated
+[current-state report](docs/current-state.md) before planning an update.
 
 Self-hosters should pin the documented PocketBase version, keep an off-box
 backup, and rehearse restores before using the ledger as the only copy of field

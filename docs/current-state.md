@@ -2,9 +2,9 @@
 
 **Authority:** Descriptive
 
-**Repository snapshot:** `main` at `4325f70`
+**Repository snapshot:** `main`, being prepared for the `v1.0.0` tag
 
-**Reviewed:** 2026-07-12
+**Reviewed:** 2026-07-20
 
 This document records behavior confirmed in this repository. It does not
 describe the broader product family except where an implemented integration
@@ -225,14 +225,18 @@ Repository configuration for that topology lives in `deploy/`; operator
 instructions live in `docs/DEPLOY.md`, `deploy/README.md`, and
 `docs/RUNBOOK.md`.
 
-**CURRENT public deployment, verified 2026-07-12:**
+**CURRENT public deployment, verified 2026-07-20:**
 
 - `https://trenchnote.com` serves the public project site.
 - `https://app.trenchnote.com/api/health` reports a healthy PocketBase API.
-- The deployed service worker is `v6`, while this repository is `v15`.
-- The deployed application does not yet expose the current receiving page or
-  inspections collection; `deploy/UPDATE.md` already records that the live box
-  is behind `main`.
+- The deployed service worker is `v6`, while this repository is `v18`.
+- The deployed database is materially behind `main`: the `inspections`,
+  `manifests`, `condition_reports`, `container_events`, and `kit_audits`
+  collections all return `404` live, so the receiving evidence, inspections,
+  transfer-manifest, condition-report, and Gang Box features are not yet
+  reachable in production. `deploy/UPDATE.md` records that the live box is
+  behind `main`. Bringing production to the `v1.0.0` release is a tracked
+  post-tag task, not a repository defect.
 
 **UNKNOWN:** the repository cannot confirm whether the optional Pi replica,
 offsite backup destination, SMTP delivery, or restore drill is currently
@@ -241,21 +245,32 @@ deployment completed them.
 
 ## Current tests and verification
 
-**CURRENT:** there is no automated unit, browser, migration, or CI test suite.
-`scripts/seed_demo.sh` exercises ordinary authenticated API writes and is used
-as a manual contract smoke test. `deploy/preflight.sh` validates a throwaway
-PocketBase startup and collection availability, while
-`deploy/verify-live.sh` performs read-only checks against a deployment.
+**CURRENT:** `scripts/smoke_test.sh` is the automated regression gate. It boots
+a fresh PocketBase from `pb_migrations/` into a throwaway `pb_data_smoke/`, runs
+the full `scripts/seed_demo.sh`, and asserts the core invariants through the
+public REST API: authentication required on every collection for both reads and
+writes, all seven ledgers append-only, the movement shape rules, the
+write-movement-then-cache sequence, derived bulk stock (in minus out, including
+a representable negative balance), the reservation lifecycle, the inspection
+requirement/asset pairing, and one-level Gang Box containment. It exits non-zero
+on any regression and is run before a migration lands, a tag, or a deploy.
+`scripts/seed_demo.sh` itself remains a living exercise of the API contract.
+`deploy/preflight.sh` validates a throwaway PocketBase startup and collection
+availability, while `deploy/verify-live.sh` performs read-only checks against a
+deployment.
 
-Frontend verification is manual: exercise pages in a browser, test offline by
-warming caches and stopping PocketBase, and verify queued writes after restart.
+There is still no automated browser or CI test suite. Frontend verification is
+manual: exercise pages in a browser, test offline by warming caches and stopping
+PocketBase, and verify queued writes after restart.
 
 ## Known limitations and active instability
 
 - **CURRENT:** repository `main` and the public deployment are not at the same
   version.
-- **CURRENT:** no automated regression gate protects migrations, derived
-  calculations, offline replay, internal documentation links, or browser flows.
+- **CURRENT:** `scripts/smoke_test.sh` guards the migrations, the API access
+  rules, and the derived calculations, but offline replay, internal
+  documentation links, and browser flows still have no automated gate and are
+  verified manually.
 - **CURRENT:** API list calls commonly cap at 500 records. The inspection CSV
   export paginates; several dashboard and detail views do not.
 - **CURRENT:** the QR base URL is embedded when labels are printed. Native
@@ -268,7 +283,8 @@ warming caches and stopping PocketBase, and verify queued writes after restart.
   produce an honest movement history containing stale assumptions.
 - **CURRENT:** synchronous SMTP can delay a notified request when mail settings
   point to an unreachable server, although mail failure cannot undo the write.
-- **UNKNOWN:** formal maturity and release criteria have not been declared.
+- **CURRENT:** the repository has no release tags yet; `v1.0.0` is being
+  prepared as the first tagged release.
 - **UNKNOWN:** there is no committed mapping from TrenchNote locations/job codes
   to project identities in sibling products.
 
