@@ -195,6 +195,8 @@ and operations remain documented in its private repository.
 - **[docs/architecture-status.md](docs/architecture-status.md)** and
   **[docs/open-questions.md](docs/open-questions.md)** — settled choices,
   proposed directions, risks, and the decision backlog.
+- **[docs/BACKLOG.md](docs/BACKLOG.md)** — motivated-but-unbuilt product ideas,
+  each with the field incident behind it and the scope wall around it.
 - **[docs/DEPLOY.md](docs/DEPLOY.md)** — running it for real: trailer
   Pi or VPS, systemd, HTTPS with Caddy, and backups you've actually tested.
 - **[docs/API.md](docs/API.md)** — the public API contract (v1): what

@@ -276,6 +276,10 @@ with auth-required rules from day one.
   never what was *ordered*. No PO records, no line items, no received-vs-
   ordered matching, no three-way match. That's the accounting department's
   spreadsheet, and the wall stays up.
+- **No equipment billing or rate calculation.** Reports may summarize the
+  ledger for the existing billing process; TrenchNote never computes charges.
+  (Rates stay in the premium sidecar per ADR 0015; a future monthly equipment
+  report — docs/BACKLOG.md item 7 — *feeds* accounting's split, never does it.)
 - **The inspections module is a visibility layer, not a safety program**
   (ADR 0014). It records inspections; it does not schedule work, assign
   inspectors, or constitute compliance. If a feature request needs workflow
