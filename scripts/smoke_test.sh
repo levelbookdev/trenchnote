@@ -451,6 +451,29 @@ rejected "a kit audit against a non-container asset refused" \
 accepted "a kit audit against the box accepted" \
   "$(post_status kit_audits "{\"container_id\":\"$BOX\",\"performed_at\":\"$TODAY\",\"performed_by\":\"smoke\",\"results\":$AUDIT_RESULTS}")"
 
+# A kit audit does more than accept a checklist. The hook (a) refuses an
+# incomplete checklist and (b) atomically DETACHES any member marked `missing`,
+# parking it at the ADR 0020 holding location with a removal event and a
+# movement to prove it. tests/gang_boxes.ps1 covers this; wiring it into the
+# GATE is what stops a regression in that side effect -- e.g. a stray debug
+# short-circuit in the hook -- from shipping past a green smoke run again.
+LOOSE2=$(post assets "{\"item\":\"$UNIQ\",\"tag_code\":\"SMK5\",\"ownership\":\"owned\",\"current_location\":\"$YARD\"}")
+accepted "a second loose asset joins the box" \
+  "$(post_status container_events "{\"asset_id\":\"$LOOSE2\",\"container_id\":\"$BOX\",\"action\":\"added\",\"location\":\"$YARD\",\"by\":\"smoke\"}")"
+# The box now holds two members; a checklist that omits one is not an audit.
+rejected "a kit audit that omits a current member is refused" \
+  "$(post_status kit_audits "{\"container_id\":\"$BOX\",\"performed_at\":\"$TODAY\",\"performed_by\":\"smoke\",\"results\":[{\"asset_id\":\"$LOOSE\",\"result\":\"present\"}]}")"
+# A complete checklist that reports LOOSE2 missing: it is detached and parked.
+MISS_AUDIT="[{\"asset_id\":\"$LOOSE\",\"result\":\"present\"},{\"asset_id\":\"$LOOSE2\",\"result\":\"missing\"}]"
+accepted "a complete kit audit reporting one member missing accepted" \
+  "$(post_status kit_audits "{\"container_id\":\"$BOX\",\"performed_at\":\"$TODAY\",\"performed_by\":\"smoke\",\"results\":$MISS_AUDIT}")"
+equals "the missing member is parked at 'Missing in transfer'" \
+  "tnmissingxfer01" "$(field assets "$LOOSE2" current_location)"
+equals "the missing member is detached from the box" \
+  "" "$(field assets "$LOOSE2" container_id)"
+nonzero "a removal movement to the holding location was written" \
+  "$(total movements "asset='$LOOSE2' && to_location='tnmissingxfer01'")"
+
 # Now that both Gang Box ledgers have a record, hold them to the same
 # append-only rule as every other ledger.
 for c in container_events kit_audits; do

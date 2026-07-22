@@ -189,7 +189,7 @@ try {
   $auditBody = @{
     id = $auditId; container_id = $box.id; performed_by = 'R. Tester'
     performed_at = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss.fff'Z'")
-    results = @(@{ asset_id = $child.id; result = 'present' })
+    results = @(@{ asset_id = $child.id; result = 'missing' })
   }
   $audit = Api POST 'collections/kit_audits/records' $auditBody $token
   $missingChild = Api GET "collections/assets/records/$($child.id)" $null $token

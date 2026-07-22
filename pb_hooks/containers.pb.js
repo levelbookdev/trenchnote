@@ -6,22 +6,23 @@
 // also cover PocketBase superuser/API-import writes, which intentionally
 // bypass collection API rules. Membership and missing-audit side effects run
 // inside the same record transaction as the ledger row that caused them.
-
-const TN_MISSING_LOCATION = "tnmissingxfer01"; // ADR 0020 convention
-
-function tnKitReject(message) {
-  throw new BadRequestError(message);
-}
-
-function tnKitRecords(app, collection, filter, sort, limit) {
-  return app.findRecordsByFilter(collection, filter, sort || "", limit || 500, 0);
-}
+//
+// IMPORTANT (PocketBase JSVM): every hook handler runs in a pooled runtime
+// that does NOT share this file's top-level scope. A handler that references a
+// file-level `function`/`const` throws `ReferenceError`, which PocketBase
+// surfaces as a generic "Failed to create record" 400 -- indistinguishable
+// from a real rejection. So each handler defines the tiny helpers it needs
+// inline. Keep it that way; do not hoist them back to file scope.
 
 // HARD RULE: exactly one membership level. A box cannot itself be inside a
 // box; a member cannot point at itself or a non-box; contained assets carry
 // no independent location cache. Also refuse to turn a box back into an
 // ordinary asset while contents still point at it.
 onRecordValidate((e) => {
+  const tnKitReject = (m) => { throw new BadRequestError(m); };
+  const tnKitRecords = (app, collection, filter, sort, limit) =>
+    app.findRecordsByFilter(collection, filter, sort || "", limit || 500, 0);
+
   const record = e.record;
   const containerId = record.getString("container_id");
   const isContainer = record.getBool("is_container");
@@ -62,6 +63,8 @@ onRecordValidate((e) => {
 // transaction commits. A removal also writes an ordinary asset movement
 // before restoring current_location, preserving ledger-first ordering.
 onRecordCreate((e) => {
+  const tnKitReject = (m) => { throw new BadRequestError(m); };
+
   const event = e.record;
   const action = event.getString("action");
   const asset = e.app.findRecordById("assets", event.getString("asset_id"));
@@ -122,22 +125,23 @@ onRecordCreate((e) => {
 // results create ordinary removal events; the membership hook above then
 // creates the missing-location movement and detaches the asset atomically.
 onRecordCreate((e) => {
+  const tnKitReject = (m) => { throw new BadRequestError(m); };
+  const TN_MISSING_LOCATION = "tnmissingxfer01"; // ADR 0020 convention
+  const tnKitRecords = (app, collection, filter, sort, limit) =>
+    app.findRecordsByFilter(collection, filter, sort || "", limit || 500, 0);
+
   const audit = e.record;
-  // DEBUG
-  e.next(); return;
   const container = e.app.findRecordById("assets", audit.getString("container_id"));
   if (!container.getBool("is_container") || container.getString("container_id")) {
     tnKitReject("Audits require a top-level gang box.");
   }
 
-  let results = audit.get("results");
-  if (!Array.isArray(results)) {
-    try { results = JSON.parse(audit.getString("results")); }
-    catch (_) {
-      try { results = JSON.parse(JSON.stringify(results)); }
-      catch (_) { results = null; }
-    }
-  }
+  // `results` is a json field. In the JSVM record.get() hands back the raw
+  // stored BYTES (a numeric array that fools Array.isArray), so parse the
+  // JSON text from getString() instead. A malformed value fails closed.
+  let results;
+  try { results = JSON.parse(audit.getString("results")); }
+  catch (_) { results = null; }
   if (!Array.isArray(results) || !results.length) {
     tnKitReject("Audit every current item as present or missing.");
   }
