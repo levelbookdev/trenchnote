@@ -819,7 +819,11 @@ function assetPage() {
   const PB = window.location.origin;
 
   return {
-    code: new URLSearchParams(location.search).get('code') || '',
+    // tag_code is uppercase-canonical: fleet numbers (P-138) are stored
+    // verbatim, invented codes (A001) are uppercase too. The DB uniqueness
+    // index is case-insensitive, but PocketBase's `=` lookup filter is NOT —
+    // so a code scanned or typed in any case is normalized here before lookup.
+    code: (new URLSearchParams(location.search).get('code') || '').toUpperCase(),
     state: 'loading',
     errorMsg: '',
     asset: null,

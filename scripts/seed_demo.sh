@@ -154,6 +154,10 @@ echo "  11 unique item types (4 metered) + 10 bulk materials"
 
 # ---- Assets (25) — created unplaced; placement is a LEDGER EVENT ------------
 # asset TAG item ownership [vendor] [po] [serial]
+# The demo uses invented A0xx codes for legibility. On a REAL deployment, a
+# fleet asset's tag_code is its stenciled company number verbatim and uppercase
+# (P-138, FL-16, SC-50); invented codes are only for untagged small tools.
+# See the tag-code convention in CLAUDE.md.
 asset() {
   _body="{\"item\":\"$2\",\"tag_code\":\"$1\",\"ownership\":\"$3\""
   [ -n "${4:-}" ] && _body="$_body,\"vendor\":\"$4\",\"po_number\":\"$5\""

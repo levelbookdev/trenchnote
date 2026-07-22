@@ -139,7 +139,8 @@ itself. Markdown documentation changes do not.
   text, not verified user identities.
 - Email notification is best effort. Delivery success is not required for a
   movement to be true.
-- `tag_code` is permanent by convention and unique index, but there is no
+- `tag_code` is permanent by convention and a **case-insensitive** unique index
+  (`P-138` and `p-138` cannot coexist — migration 1783468825), but there is no
   database rule preventing an authenticated update after printing.
 - Quantities are positive integers, but the schema has no explicit
   unit-of-measure field.

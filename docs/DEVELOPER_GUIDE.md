@@ -89,7 +89,13 @@ current location's `job_code` — never stored anywhere.
 ### assets — a specific physical thing
 
 Belongs to an item, carries `tag_code` (short, human-readable, **unique
-index** — one label, one asset, enforced by SQLite). Rentals are not special:
+index** — one label, one asset, enforced by SQLite). Tag codes are
+uppercase-canonical: fleet equipment uses its stenciled company number verbatim
+(`P-138`, `FL-16`), untagged tools get an invented `A001`-style code. The unique
+index is **case-insensitive** (`COLLATE NOCASE`, migration 1783468825), but
+PocketBase's `=` filter compares the column case-sensitively — so the lookup
+paths in `asset.html`/`scan.html` normalize a scanned or typed code to uppercase
+first, and any new tag-lookup path must do the same. Rentals are not special:
 `ownership=rented` plus `vendor`/`po_number`, nothing else changes.
 
 `current_location` is a **cache**, not truth — see the ledger rules below.

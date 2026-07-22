@@ -204,6 +204,19 @@ Ignored: the PocketBase binary (`pocketbase` / `pocketbase.exe`) and `pb_data/`
   correction, with the human-readable tag code printed underneath as the
   mud-proof fallback. Keep tag codes short (3–5 chars) so QR density stays low
   and scans survive scratches and mud.
+- **Tag codes are UPPERCASE and case-insensitive.** For fleet equipment that
+  already carries a stenciled company asset number, `tag_code` **is that number
+  verbatim** — `P-138`, `FL-16`, `SC-50`, `MISC-37`, `T-127A`. Hyphens, mixed
+  length, and trailing letters are all fine, and even the longest still encodes
+  to a coarse QR version 6 (41×41 modules) at level H, so density stays low.
+  Crews already speak these numbers; a second invented ID would fight a decade
+  of stenciled paint (docs/BACKLOG.md item 8). Invented short codes (`A001`
+  style) remain the convention only for untagged small tools and the future
+  unassigned-tag pools (BACKLOG item 1). Enter codes uppercase in the admin UI;
+  the unique index is case-insensitive (migration `1783468825`, so `P-138` and
+  `p-138` can never become two assets), and `asset.html`/`scan.html` normalize
+  a scanned or typed code to uppercase before lookup (PocketBase's `=` filter
+  is case-sensitive, so any new tag-lookup path must uppercase its input too).
 - **Comment the PocketBase API calls** — filter syntax, `expand`, the
   write-movement-then-update-cache sequence — so the maintainer learns the
   backend by reading the code.
@@ -240,6 +253,10 @@ with auth-required rules from day one.
   never what was *ordered*. No PO records, no line items, no received-vs-
   ordered matching, no three-way match. That's the accounting department's
   spreadsheet, and the wall stays up.
+- **No equipment billing or rate calculation.** Reports may summarize the
+  ledger for the existing billing process; TrenchNote never computes charges.
+  (Rates stay in the premium sidecar per ADR 0015; a future monthly equipment
+  report — docs/BACKLOG.md item 7 — *feeds* accounting's split, never does it.)
 - **The inspections module is a visibility layer, not a safety program**
   (ADR 0014). It records inspections; it does not schedule work, assign
   inspectors, or constitute compliance. If a feature request needs workflow

@@ -341,13 +341,16 @@ function scanPage() {
     // ANY origin (old LAN-IP labels keep working in-app), or a bare short
     // code. Anything else is somebody's WiFi QR — say so politely.
     parseTag(text) {
+      // Normalize to the uppercase-canonical form tag_code is stored in, so a
+      // label read in any case (or an old lowercase one) still resolves: the DB
+      // unique index is case-insensitive, but the `=` lookup filter is not.
       try {
         const u = new URL(text);
         const c = u.searchParams.get('code');
-        if (c) return c;
+        if (c) return c.toUpperCase();
         return null;
       } catch (err) { /* not a URL — maybe a bare code */ }
-      if (/^[A-Za-z0-9-]{2,8}$/.test(text)) return text;
+      if (/^[A-Za-z0-9-]{2,8}$/.test(text)) return text.toUpperCase();
       return null;
     },
 

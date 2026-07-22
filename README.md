@@ -82,7 +82,9 @@ Then:
    is no public sign-up, on purpose.)
 3. Add a few `locations` (e.g. "Main Yard", "Northside LS"), a couple of
    `items` (what a thing *is* — "19' Scissor Lift"), and `assets` (a
-   specific physical one, with a short `tag_code` like `A001`).
+   specific physical one, with a `tag_code` — the company fleet number
+   stenciled on it, like `P-138`, or a short invented code like `A001` for
+   untagged tools; enter it uppercase).
 4. Open **http://127.0.0.1:8090/labels.html**, sign in, print the QR labels,
    and tape them on.
 5. Scan a label with your phone camera → sign in once on that phone → the

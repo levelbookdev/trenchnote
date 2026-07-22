@@ -15,8 +15,11 @@ with the same login — it'll drop you right back at whatever you scanned.
 
 ## Moving a piece of equipment
 
-Every tracked machine and tool has a QR sticker with a short code printed
-under it (like `A001`).
+Every tracked machine and tool has a QR sticker with a code printed under it.
+For trucks, forklifts, containers, and other fleet gear it's the company number
+already painted on the side (like `P-138` or `FL-16`); smaller untagged tools
+get a short code like `A001`. If you ever type a code by hand, don't worry about
+capital letters — `p-138` and `P-138` both find the same thing.
 
 1. **Point your phone camera at the QR code** and tap the link that pops up.
 2. The page shows what the thing is and where it's supposed to be.

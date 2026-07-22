@@ -65,3 +65,27 @@ field, not a code refactor.
 - The URL format and `tag_code` semantics are part of the public API
   contract ([docs/API.md](../API.md), ADR 0011): premium and third-party
   tools may rely on them exactly as printed labels do.
+
+## Addendum (2026-07-21) — fleet numbers and case handling
+
+Adopted as the first production assets were catalogued.
+
+- **Fleet numbers ARE the tag code.** For equipment that already carries a
+  stenciled company asset number (`P-138`, `FL-16`, `SC-50`, `MISC-37`,
+  `T-127A`), `tag_code` is that number verbatim, uppercase. Crews already speak
+  these numbers; a parallel invented ID would fight a decade of stenciled paint.
+  Invented short codes (`A001` style) stay the convention only for untagged
+  small tools and future unassigned-tag pools (docs/BACKLOG.md items 8 and 1).
+  No schema change was needed — `tag_code` is free text; hyphens, mixed length,
+  and trailing letters were already accepted, and the longest realistic code
+  still encodes to a coarse QR version 6 (41×41) at level H.
+- **Codes are uppercase-canonical and matched case-insensitively.** Two
+  independent changes make this true, because they cover different halves:
+  - *Uniqueness* — the unique index gained `COLLATE NOCASE` (migration
+    `1783468825`), so `P-138` and `p-138` can never be saved as two assets.
+  - *Lookup* — the index change does **not** make PocketBase's `=` filter
+    case-insensitive (the filter compares the column, BINARY, not the index),
+    so `asset.html` and `scan.html` normalize a scanned or typed code to
+    uppercase before the lookup. Any new tag-lookup path must do the same.
+  The net effect: a label read or typed in any case resolves to the one asset,
+  and the stored/printed form stays uppercase.
