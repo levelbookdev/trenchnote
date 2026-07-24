@@ -274,6 +274,16 @@ Ignored: the PocketBase binary (`pocketbase` / `pocketbase.exe`) and `pb_data/`
   `p-138` can never become two assets), and `asset.html`/`scan.html` normalize
   a scanned or typed code to uppercase before lookup (PocketBase's `=` filter
   is case-sensitive, so any new tag-lookup path must uppercase its input too).
+  Two further normalization rules come from real transcription errors (the 2020
+  timecards, docs/BACKLOG.md item 8): (a) a tag code containing ambiguous
+  `O`/`0` or `I`/`1` lookalikes should be **flagged for confirmation** at
+  asset-creation / claim time — a letter `O` typed for a zero once reached a
+  billing document ("T-19O B") — never silently blocked; and (b) **strip and
+  collapse whitespace** on entry and lookup (that same code carried stray
+  internal spaces). Asset creation is admin-UI-only today, so those two guards
+  attach to any future frontend create or claim flow (BACKLOG item 1); the case
+  rule above is already enforced in code. All of this is standing evidence for
+  **scan-over-type**: a QR scan cannot typo an asset ID.
 - **Comment the PocketBase API calls** — filter syntax, `expand`, the
   write-movement-then-update-cache sequence — so the maintainer learns the
   backend by reading the code.

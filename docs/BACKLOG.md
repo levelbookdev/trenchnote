@@ -42,6 +42,18 @@ once here and referenced by the items:
   record an asset's status. It is a movements ledger maintained by hand, every
   Friday, by six people.
 
+> **Evidence addendum — three 2020 weekly timecards.** Three historical weekly
+> equipment timecards surfaced later (2020, from a large single-job division —
+> a different *dialect* of the same corporate form incident 2's division uses).
+> Where that dialect records WHICH JOB each asset sat at weekly, this one
+> records USAGE STATE per week — `X` (worked), `IDLE`, `STORED`, `BROKE DOWN`,
+> with margin comments like "AWAITING REPAIR". They also exposed concrete
+> data-quality failures: fat-fingered month-to-month meter readings, an `O`
+> typed for a `0` inside a tag number, and a sheet filled for week 1 and left
+> blank for weeks 2–4 (the Friday manual ritual dying mid-month). This is
+> corroborating field evidence, not a new incident — it enriches items 5, 6,
+> 7, and 8 below, and motivates the new item 13.
+
 > **Reconciliation note (readings).** Item 6 talks about a "readings concept."
 > An append-only **`readings`** ledger already ships (ADR 0012): `asset`,
 > `value`, `reading_type` = `hours` | `odometer`, `recorded_by`, `photo`. So
@@ -157,11 +169,20 @@ with a stable id in mind avoids a painful cross-product retrofit later.
 "down for repair" — survives today only as a margin note in an Excel cell,
 invisible to everyone who is not looking at that spreadsheet that week.
 Location answers "where," but the timecard also needs "and is it even working."
+The 2020 timecards (evidence addendum) make the vocabulary concrete: the weekly
+cells already carry a working taxonomy — `X` (worked), `IDLE`, `STORED`,
+`BROKE DOWN`, plus "AWAITING REPAIR" comments. Crews have been recording asset
+state by hand for years; there is a field-validated set of values to model.
 
-**Proposed shape.** A first-class asset status field: `on_hold` /
-`down_for_repair` / `missing` / (in-service default), rendered next to location
-everywhere an asset appears. It replaces the margin note with structured state.
-**Missing (item 3) is one value of this field**, not a parallel mechanism.
+**Proposed shape.** A first-class asset status field, its values informed by
+that field taxonomy — e.g. `active` / `idle` / `stored` / `down_for_repair` /
+`missing` (in-service the default) — rendered next to location everywhere an
+asset appears, replacing the margin note with structured state. Crucially this
+records **operational STATE, not usage-for-billing**: `idle` says a machine is
+sitting, not what (if anything) sitting bills at. Whether `IDLE` bills
+differently from `X` is the Equipment Division's call in *their* process, never
+TrenchNote's (the billing non-goal in [CLAUDE.md](../CLAUDE.md)). **Missing
+(item 3) is one value of this field**, not a parallel mechanism.
 
 **Explicitly not.** No maintenance scheduling, work orders, or repair tracking
 — `down_for_repair` is a *label a human sets and clears*, not the front end of
@@ -178,7 +199,12 @@ Underpins items 3 and 9.
 transcribed by hand into the timecard for billing. Incident 1: "I saw it here
 today" wants to be recorded, not emailed. Both are the same shape — *an
 observation about an asset at a point in time* — and TrenchNote already models
-exactly this shape for meters.
+exactly this shape for meters. The 2020 timecards (evidence addendum) show why
+this matters *and* why it needs a guardrail: they contain real transcription
+errors that sailed into billing inputs unchecked — one hour meter recorded as
+3,248 one month and 32,609 the next, another as 7,708 then 78,929. Those are
+fat-fingered digits (a machine cannot accrue tens of thousands of hours in a
+month), and nothing caught them before they became billing math.
 
 **Proposed shape.** Generalize the **existing** `readings` ledger (ADR 0012 —
 `asset`, `value`, `reading_type`, `recorded_by`, `photo`, append-only) so
@@ -187,6 +213,19 @@ place and a time, not a number). One schema shape then covers both month-end
 meter capture *and* item 2's sightings, as observation events appended to an
 asset — never mutations, exactly like the movements ledger. The generalization,
 not a new collection, is the whole point: the pattern is already proven here.
+
+Because readings are append-only *per asset*, cheap validation is possible at
+entry — the previous reading is right there to compare against. A meter reading
+that is **lower** than its predecessor, or a **delta beyond a plausible bound**
+(e.g. > 750 hours or a large odometer jump in one month), gets **flagged for
+confirmation before saving** — the same confirm-guard pattern as the bulk
+negative-stock guard. This is a **confirm, never a block**: a genuinely lower
+number is real (replaced meter, or the typo the confirm just caught), so the
+save still goes through once the human okays it — consistent with the shipped
+rule that a lower reading is accepted and flagged at render, never rejected
+(see the `readings` notes in [CLAUDE.md](../CLAUDE.md)). The point is to make a
+fat-fingered `32,609` announce itself at the keyboard, not three weeks later on
+an invoice.
 
 **Explicitly not.** No automated meter ingestion — no telematics feeds, no
 vendor APIs pushing hours (that would breach the no-integrations wall). Readings
@@ -202,18 +241,32 @@ record unchanged.
 plus meter readings, maintained by hand by six PMs every Friday, because no
 system produced it for them. TrenchNote already holds the raw material — moves
 (where, when, who) and readings (hours/odometer) — as source-of-truth data.
+The 2020 timecards (evidence addendum) sharpen the case two ways. First, the
+same corporate form is used in **two dialects** — one records the JOB per week,
+the other the USAGE STATE per week (`X`/`IDLE`/`STORED`/`BROKE DOWN`) — so a
+generated report must be honest about which columns it can fill. Second, the
+observed **decay**: in one month's file week 1 is filled and weeks 2–4 are
+blank — the Friday manual ritual dying mid-month. That specific failure is
+exactly what a ledger-DERIVED report does not have, because it is computed from
+what actually moved, not from whether someone remembered to type on Friday.
 
 **Proposed shape.** Generate the timecard's content — per asset, per week, the
 job location it sat at, with arrival/removal dates and the latest meter reading
 — as a **derived query** over the movements ledger + readings, exported as CSV
 for the existing process to consume. TrenchNote records reality; this is a
 *report about reality*, computed, never hand-kept. (The dashboard's inspection
-CSV export in `index.html` is the pattern to follow.)
+CSV export in `index.html` is the pattern to follow.) The export fills **only
+what the ledger knows** — presence, location, arrival/removal dates, latest
+meter readings — and leaves the USAGE cells (`X` vs `IDLE`) for the PM to mark.
+TrenchNote does not track usage and must not infer it; a readings delta can at
+most *hint* whether a machine ran, and the report should not pretend otherwise.
 
 **Explicitly not.** TrenchNote must **never become the billing system.** The
 export *feeds* the Equipment Division's existing billing process; it does not
 compute charges, apply rates, or do fractional-cost job-splits — accounting
-still owns billing and does the split from this data. This boundary is now also
+still owns billing and does the split from this data. It also does not fabricate
+the usage column: presence is derived, but *usage* (`X`/`IDLE`) stays a human
+mark, never a guess from meter deltas. This boundary is now also
 a first-class non-goal in [CLAUDE.md](../CLAUDE.md) (Part C: "No equipment
 billing or rate calculation") and echoes ADR 0015 (rates stay in the premium
 sidecar).
@@ -240,10 +293,31 @@ things they already have names for.
 short codes (`A001` style) remain the convention only for untagged small tools
 and for the future unassigned-tag pools (item 1). The `tag_code` field, its
 unique index, and ADR 0010's permanence rules already accommodate these
-formats with no schema change; verification (this session) confirmed hyphens,
-mixed length, and trailing letters all store and scan fine, and set the
-uppercase-entry rule to match how lookups compare. See the conventions section
-of CLAUDE.md for the operative text.
+formats with no schema change; verification (an earlier session) confirmed
+hyphens, mixed length, and trailing letters all store and scan fine, and set
+the uppercase-entry rule to match how lookups compare. See the conventions
+section of CLAUDE.md for the operative text.
+
+**Normalization (extended from the 2020 timecards).** The evidence addendum
+turned up three real-world failure modes that the convention now guards
+against, documented operatively in CLAUDE.md/AGENTS.md:
+- *Inconsistent casing in the wild* — the same file writes "Misc-62" and
+  "MISC-53". Already handled: the unique index is case-insensitive (migration
+  `1783468825`, `COLLATE NOCASE`) and `asset.html`/`scan.html` uppercase a
+  scanned or typed code before the `=` lookup. This session only writes the
+  rule down alongside the new lookalike/whitespace notes; it changes no code.
+- *`O`/`0` and `I`/`1` lookalikes* — one timecard reads "T-19O B", a letter `O`
+  typed for a zero **in a billing document**. The convention now says: at
+  asset-creation / claim time, a tag code containing an ambiguous `O`/`0` or
+  `I`/`1` should be **flagged for confirmation** (not blocked). This is
+  forward-looking — asset creation is admin-UI-only today, so the guard
+  attaches to the future claim flow (item 1) or any future frontend create.
+- *Stray whitespace* — "T-19O B" also shows internal spaces creep in.
+  Whitespace should be stripped/collapsed on entry and on lookup.
+
+These are also standing evidence for **scan-over-type**: a QR scan cannot typo
+an asset ID, so every one of these failure modes is one the scanner (`scan.html`)
+sidesteps entirely.
 
 **Explicitly not.** TrenchNote does not *import* or *sync* the company fleet
 registry — a PM types the existing number in as the tag code once, at
@@ -340,3 +414,41 @@ dollar. No vendor integration (ownership stays manual).
 
 **Depends on.** Nothing hard; the date fields exist (migration `1783468816`).
 A date comparison plus a render change.
+
+---
+
+> Item 13 traces to the 2020 timecard evidence addendum at the top of this
+> file, not to a July 2026 incident or the 2026-07-21 ideation pass.
+
+## 13. Attachments / travels-with relationships
+
+**Motivation.** The 2020 timecards model attachments as **unnumbered child rows
+indented under a parent asset** — an excavator followed by its 60"/48"/36"/30"
+buckets and a compaction wheel; a loader followed by its forks; a skidsteer
+followed by its sweeper. None of these carry fleet numbers. They are exactly the
+high-value, swappable, unlabeled items that walk off — a ripper shank is a
+four-figure item with no ID — and the spreadsheet's only model for them is
+visual indentation under the parent. When the parent moves, the attachments are
+assumed to go with it; when one gets swapped onto another machine, nothing
+records it.
+
+**Proposed shape.** A lightweight parent link on assets — "travels with X".
+Moving the parent **offers** to move its linked children in the same action;
+children can be **detached** and moved independently; and children can be
+**individually tagged** (giving the bucket its own `tag_code` — the very
+no-number problem the spreadsheet cannot solve). The default coupling is a
+convenience, not a cage: the link makes the common case (bucket rides with the
+excavator) one tap, without pretending the attachment is welded on.
+
+**Explicitly not.** No kit/BOM management, no quantity-per-kit, no attachment
+compatibility rules — a child is one asset with a parent pointer, not a bill of
+materials. And deliberately **distinct from the Gang Box membership model**
+(ADR 0021): a gang box is container-and-contents for a tool box (contained
+assets clear their `current_location` and *cannot* move independently), whereas
+an attachment is parent-and-machine where the child *can* detach and move on its
+own. Keep the two mechanisms from bleeding into each other at design time.
+
+**Depends on.** Nothing hard — a single self-relation on `assets`. Interacts
+nicely with item 1 (unassigned tag pools): unnumbered attachments are prime
+claim-a-tag candidates, the fastest path from "indented spreadsheet row" to
+"scannable thing."
