@@ -280,9 +280,12 @@ Ignored: the PocketBase binary (`pocketbase` / `pocketbase.exe`) and `pb_data/`
   asset-creation / claim time — a letter `O` typed for a zero once reached a
   billing document ("T-19O B") — never silently blocked; and (b) **strip and
   collapse whitespace** on entry and lookup (that same code carried stray
-  internal spaces). Asset creation is admin-UI-only today, so those two guards
-  attach to any future frontend create or claim flow (BACKLOG item 1); the case
-  rule above is already enforced in code. All of this is standing evidence for
+  internal spaces). Whitespace stripping (b) is enforced on the scan/lookup path
+  in `scan.html` (`parseTag`) alongside the uppercasing; the O/0 & I/1 lookalike
+  guard (a) stays forward-looking, belonging to a future create/claim flow
+  (BACKLOG item 1), since asset creation is admin-UI-only today and a scan
+  resolves an existing code rather than minting one. All of this is standing
+  evidence for
   **scan-over-type**: a QR scan cannot typo an asset ID.
 - **Comment the PocketBase API calls** — filter syntax, `expand`, the
   write-movement-then-update-cache sequence — so the maintainer learns the

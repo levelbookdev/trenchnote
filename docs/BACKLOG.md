@@ -304,16 +304,18 @@ against, documented operatively in CLAUDE.md/AGENTS.md:
 - *Inconsistent casing in the wild* — the same file writes "Misc-62" and
   "MISC-53". Already handled: the unique index is case-insensitive (migration
   `1783468825`, `COLLATE NOCASE`) and `asset.html`/`scan.html` uppercase a
-  scanned or typed code before the `=` lookup. This session only writes the
-  rule down alongside the new lookalike/whitespace notes; it changes no code.
+  scanned or typed code before the `=` lookup.
+- *Stray whitespace* — "T-19O B" also shows internal spaces creep in. Now
+  handled on the scan/lookup path: `scan.html`'s `parseTag` strips **all**
+  whitespace (as well as uppercasing) before the lookup (VERSION `v20`). Entry-
+  side stripping still waits on a future frontend create/claim flow — asset
+  creation is admin-UI-only today.
 - *`O`/`0` and `I`/`1` lookalikes* — one timecard reads "T-19O B", a letter `O`
   typed for a zero **in a billing document**. The convention now says: at
   asset-creation / claim time, a tag code containing an ambiguous `O`/`0` or
-  `I`/`1` should be **flagged for confirmation** (not blocked). This is
-  forward-looking — asset creation is admin-UI-only today, so the guard
-  attaches to the future claim flow (item 1) or any future frontend create.
-- *Stray whitespace* — "T-19O B" also shows internal spaces creep in.
-  Whitespace should be stripped/collapsed on entry and on lookup.
+  `I`/`1` should be **flagged for confirmation** (not blocked). This stays
+  forward-looking — a scan resolves an *existing* code, so the guard belongs to
+  the future claim flow (item 1) or any future frontend create, not `parseTag`.
 
 These are also standing evidence for **scan-over-type**: a QR scan cannot typo
 an asset ID, so every one of these failure modes is one the scanner (`scan.html`)
