@@ -81,3 +81,20 @@ in [CLAUDE.md](CLAUDE.md).
 - Whether to state the copyright holder's name explicitly in `LICENSE` / `README`
   (today the LICENSE is stock AGPL text with no name). Maintainer's call; not
   blocking anything.
+
+## Ops follow-up — domain verification (added 2026-07-21)
+
+- **Verify `trenchnote.com` under the `levelbookdev` org once the Porkbun
+  registrar transfer completes.** The domain was verified under the old personal
+  account (`mds08011`) during the org migration, not the org, so GitHub's
+  `protected_domain_state` is still null. This is takeover-hardening only — the
+  site is already live with HTTPS enforced. Deferred because the registration is
+  mid-transfer from Namecheap to Porkbun as of 2026-07-21.
+  - **First, keep the site from going dark:** a registrar transfer does not carry
+    DNS records. If the nameservers switch to Porkbun, recreate the GitHub Pages
+    apex `A` records there — `185.199.108.153`, `185.199.109.153`,
+    `185.199.110.153`, `185.199.111.153` (optional `www` CNAME →
+    `levelbookdev.github.io`). Leave the repo's `docs/CNAME` (= `trenchnote.com`)
+    untouched.
+  - **Then verify:** org → Settings → Pages → Add a domain → add the challenge
+    TXT record (`_github-pages-challenge-levelbookdev`) at Porkbun → Verify domain.
