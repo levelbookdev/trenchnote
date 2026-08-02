@@ -483,6 +483,38 @@ for c in container_events kit_audits; do
   rejected "$c rejects DELETE" "$(delete_status "$c" "$_id")"
 done
 
+# ---- 15. movements.moved_at: the day it happened, not the day it synced -----
+# ADR 0023. The ledger's only timestamp used to be `created`, set by the server
+# at insert -- so a move logged in a dead zone on Friday and synced Monday was
+# stamped MONDAY, and every derived answer (asset history, days-here, the
+# equipment-timecard handoff of ADR 0022) inherited that lie.
+#
+# moved_at is client-set, date-only at UTC midnight, and OPTIONAL -- exactly
+# like readings.read_at (ADR 0016) and inspections.inspected_at (ADR 0014).
+# Optional is load-bearing: every pre-migration row has none, and the
+# derivations fall back to `created`. These three assertions are the contract.
+echo "==> movements.moved_at is optional, round-trips, and stays immutable (ADR 0023)"
+BACKDATED=$(date -u -d '3 days ago' +%Y-%m-%d 2>/dev/null || date -u -v-3d +%Y-%m-%d)
+
+# (a) a movement created WITH moved_at keeps the day the client stamped --
+#     this is the offline-synced-late case, back-dated on purpose so a
+#     server-side default could not fake a pass.
+MV_STAMPED=$(post movements \
+  "{\"item\":\"$BULK\",\"quantity\":7,\"to_location\":\"$YARD\",\"moved_at\":\"$BACKDATED\",\"note\":\"smoke moved_at\"}")
+equals "moved_at round-trips the client's date" \
+  "$BACKDATED" "$(field movements "$MV_STAMPED" moved_at | cut -c1-10)"
+
+# (b) omitting it still works. Any client that never learned about the field --
+#     a third party, an old queued body -- must keep writing to the ledger.
+accepted "movement without moved_at still accepted (optional)" \
+  "$(post_status movements "{\"item\":\"$BULK\",\"quantity\":3,\"to_location\":\"$YARD\",\"note\":\"smoke no moved_at\"}")"
+
+# (c) it cannot be edited afterwards. moved_at lands on equipment invoices by
+#     way of ADR 0022, so it is covered by the same append-only rule as the
+#     rest of the ledger: a wrong date is corrected with a NEW movement.
+rejected "moved_at cannot be changed by a later update" \
+  "$(patch_status movements "$MV_STAMPED" '{"moved_at":"2020-01-01"}')"
+
 # ---- report -----------------------------------------------------------------
 echo ""
 echo "-------------------------------------------------------------"

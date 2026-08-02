@@ -53,18 +53,35 @@
     return periods;
   }
 
+  // When a movement actually happened: its observation date if the client
+  // stamped one (ADR 0023), else the server arrival time. Empty moved_at is
+  // legal — the field is optional and every pre-migration row has none.
+  function movedWhen(move) {
+    return (move && move.moved_at) || (move && move.created) || '';
+  }
+
   // Merge direct movements, membership transitions, and movements inherited
-  // from a box while the asset belonged to it. Server `created` order is used
-  // for membership and movement facts, matching ADR 0008 arrival-order truth.
+  // from a box while the asset belonged to it.
+  //
+  // Two different clocks are in play, deliberately:
+  //
+  //  - `when` (moved_at, falling back to created) orders what a human READS.
+  //    A move logged in a dead zone on Friday and synced Monday belongs on
+  //    Friday, above the weekend's other rows (ADR 0023).
+  //  - `created` still decides membership windowing below, and still breaks
+  //    ties. Container events carry no observation date, so comparing a
+  //    date-only moved_at against an event's full timestamp would misjudge
+  //    which side of an add/remove a move fell on. Arrival order stays the
+  //    authority for that (ADR 0008), same as before this field existed.
   function locationHistory(directMoves, events, containerMoves) {
     const rows = [];
     for (const move of (directMoves || [])) {
-      rows.push({ kind: 'move', created: move.created, move,
+      rows.push({ kind: 'move', created: move.created, when: movedWhen(move), move,
         from: move.expand && move.expand.from_location || null,
         to: move.expand && move.expand.to_location || null });
     }
     for (const event of (events || [])) {
-      rows.push({ kind: event.action, created: event.created, event,
+      rows.push({ kind: event.action, created: event.created, when: event.created, event,
         container: event.expand && event.expand.container_id || null,
         to: event.expand && event.expand.location || null });
     }
@@ -73,13 +90,20 @@
         if (move.asset !== period.containerId) continue;
         if (String(move.created) < String(period.start)) continue;
         if (period.end && String(move.created) >= String(period.end)) continue;
-        rows.push({ kind: 'via_container', created: move.created, move,
+        rows.push({ kind: 'via_container', created: move.created, when: movedWhen(move), move,
           container: period.added.expand && period.added.expand.container_id || null,
           from: move.expand && move.expand.from_location || null,
           to: move.expand && move.expand.to_location || null });
       }
     }
-    rows.sort((a, b) => String(b.created).localeCompare(String(a.created)));
+    // Newest first by observation date, ties broken by arrival time. The
+    // tiebreak is load-bearing: moved_at is date-only, so every move made on
+    // one day carries the same stamp, and without it an A→B then B→C on the
+    // same afternoon would lose its order. This is `-moved_at,-created`
+    // (ADR 0016's ordering, applied to movements) evaluated client-side.
+    rows.sort((a, b) =>
+      String(b.when).localeCompare(String(a.when)) ||
+      String(b.created).localeCompare(String(a.created)));
     return rows;
   }
 
@@ -89,5 +113,6 @@
     effectiveLocation,
     membershipPeriods,
     locationHistory,
+    movedWhen,
   };
 })(window);

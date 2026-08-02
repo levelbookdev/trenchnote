@@ -298,6 +298,14 @@ TrenchNote keeps working with zero bars:
   offline too** —
   photos and all. They ride the same ⏳ queue as moves and send
   themselves when signal returns, keeping the date you actually did them.
+- **The date that gets recorded is the day you did it, not the day it sent.**
+  Move something Friday afternoon in a hole with no bars, and it still sends
+  Monday morning — but the record says Friday. That matters: the equipment
+  timecard and the job billing come off these dates, and a Friday move logged
+  as Monday would put the machine on the wrong job for the weekend. Where the
+  two days differ, the equipment page shows both, like
+  "Jun 26 · entered Jun 29" — the day it moved, then the day it reached the
+  office.
 - The receiving phone must have opened the manifest while it still had signal
   before it can receive that manifest offline. The receiving site cannot see a
   brand-new sender manifest until the sender's phone reaches the server.

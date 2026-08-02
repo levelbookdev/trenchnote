@@ -304,7 +304,8 @@
           </div>
           <div class="who">
             <span x-text="m.moved_by || 'unspecified'"></span> ·
-            <span x-text="ago(m.created)"></span>
+            <!-- The day it happened, not the day it synced (ADR 0023) -->
+            <span x-text="ago(m.moved_at || m.created)"></span>
           </div>
         </div>
       </template>
@@ -505,7 +506,11 @@ function dashboard() {
           TN.fetch(`${PB}/api/collections/assets/records?expand=item,current_location,container_id.item,container_id.current_location&sort=tag_code&perPage=500`),
           // Nested expand: "asset.item" resolves the movement's asset AND
           // that asset's item in one request; plain "item" covers bulk moves.
-          TN.fetch(`${PB}/api/collections/movements/records?sort=-created&perPage=15&expand=asset.item,item,from_location,to_location`),
+          // Ordered by the day the move happened (moved_at, ADR 0023), ties
+          // and pre-migration rows falling back to created — so a move made
+          // Friday and synced Monday sits under Friday in "recently moved",
+          // not at the top as if it just happened.
+          TN.fetch(`${PB}/api/collections/movements/records?sort=-moved_at,-created&perPage=15&expand=asset.item,item,from_location,to_location`),
           // The two extra reads that power the Materials section:
           TN.fetch(`${PB}/api/collections/items/records?filter=(tracking_mode='bulk')&sort=name&perPage=200`),
           // deliveries = bulk movements in from outside (no from_location);

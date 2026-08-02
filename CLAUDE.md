@@ -100,7 +100,14 @@ reproduce the entire database from the repo.
     negative balances are flagged as data errors, never hidden.
   Plus `moved_by` (text), `note` (text — PO/slip numbers). All shapes are
   enforced server-side by the collection's `createRule` (migrations
-  1783468805–1783468807). Timestamp is the `created` autodate field.
+  1783468805–1783468807). Two timestamps, answering different questions
+  (ADR 0023): `created` (autodate) is when the row reached the server;
+  `moved_at` (optional `date`, client-set, date-only UTC midnight, migration
+  `1783468826`) is the day the move actually happened, stamped at capture so
+  an offline move keeps its real day through the queue. Empty = unknown and
+  derivations fall back to `created`; order by `-moved_at,-created` (the
+  `created` tiebreak keeps same-day moves in sequence, since `moved_at` is
+  date-only). Same shape as `readings.read_at` and `inspections.inspected_at`.
   Receiving-log fields (ADR 0013, all optional, offered by the UI only in
   "New delivery" mode): `vendor_name`, `po_number` (free text a human
   types — never a PO record), `packing_slip` (file, 1 — the form nags

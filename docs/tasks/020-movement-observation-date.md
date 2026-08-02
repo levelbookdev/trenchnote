@@ -1,6 +1,6 @@
 # 020 — Add `movements.moved_at`: when the move actually happened
 
-Status: TODO
+Status: DONE
 
 ## Context
 

@@ -95,6 +95,7 @@ authority. At the reviewed snapshot every committed ADR below is accepted.
 | [0020](adr/0020-transfer-manifests.md) | Manifest-derived transit and atomic two-sided transfer confirmation |
 | [0021](adr/0021-gang-boxes-and-kitting.md) | One-level gang-box containment, derived member location, and audited contents |
 | [0022](adr/0022-equipment-timecard-handoff-contract.md) | Equipment-timecard handoff manifest derived from movements and readings; no rates, splits, or usage |
+| [0023](adr/0023-movement-observation-date.md) | Movement observation date distinct from system-entry time |
 
 ADR 0017 was considered and deferred inside ADR 0018; no standalone accepted
 ADR 0017 exists.

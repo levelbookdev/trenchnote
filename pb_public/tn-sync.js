@@ -62,6 +62,21 @@ const TNSync = {
       .map((b) => chars[b % 36]).join('');
   },
 
+  // Today as a date-only UTC-midnight stamp, the house convention for
+  // observation dates (movements.moved_at ADR 0023, readings.read_at
+  // ADR 0016, inspections.inspected_at ADR 0014).
+  //
+  // Called at CAPTURE time, never at replay time — that is the whole point.
+  // A move logged in a dead zone on Friday and synced Monday must carry
+  // Friday; `created` records the Monday it reached the server.
+  //
+  // It lives here, beside genId(), because every movement-write path already
+  // depends on TNSync for its pre-generated id, and one shared helper keeps
+  // the format from drifting across the seven pages that build movements.
+  today() {
+    return new Date().toISOString().slice(0, 10) + ' 00:00:00.000Z';
+  },
+
   // A queued op is a semantic action, not raw HTTP. `movement` is the
   // request body for POST /api/collections/movements/records; assetPatch
   // (asset moves only) is the current_location cache update that must
@@ -78,6 +93,11 @@ const TNSync = {
     // committed, replaying under the SAME id is what makes the retry
     // idempotent. Only mint one for callers that didn't.
     movement.id = movement.id || this.genId();
+    // Same defensive backfill for the observation date (ADR 0023). Callers
+    // stamp it when they build the body; this catches any that didn't.
+    // Enqueue runs immediately after the live POST failed, so "now" here is
+    // still the capture day — never the replay day.
+    movement.moved_at = movement.moved_at || this.today();
     // Rebuild `files` as a PLAIN object before it touches IndexedDB.
     // Callers hand us Alpine component state, and Alpine's reactivity
     // wraps arrays in Proxies — which structured clone rejects with

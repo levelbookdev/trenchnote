@@ -215,6 +215,12 @@ function manifestPage() {
       const receiver=this.accountLabel(user) || 'signed-in account';
       const requests=[];
       let hasDiscrepancy=false;
+      // One stamp for the whole receipt (ADR 0023): every line of a manifest
+      // is received in the same act, so they share an observation date.
+      // Stamped here at capture — this batch goes through enqueueBatch, which
+      // has no per-movement backfill, so an unstamped line would silently
+      // fall back to the sync day.
+      const movedAt=TNSync.today();
 
       for (const line of this.lines) {
         const received=Math.floor(Number(line.received_quantity));
@@ -230,7 +236,7 @@ function manifestPage() {
           requests.push({ method:'POST', url:'/api/collections/movements/records', body:{
             id:TNSync.genId(), asset:line.asset, item:'', quantity:0,
             from_location:this.manifest.from_location, to_location:destination,
-            moved_by:receiver, note
+            moved_by:receiver, note, moved_at:movedAt
           }});
           // Ledger first, cache second — even inside the transaction.
           requests.push({ method:'PATCH', url:'/api/collections/assets/records/'+line.asset,
@@ -239,12 +245,13 @@ function manifestPage() {
           if (received > 0) requests.push({ method:'POST', url:'/api/collections/movements/records', body:{
             id:TNSync.genId(), asset:'', item:line.item, quantity:received,
             from_location:this.manifest.from_location, to_location:this.manifest.to_location,
-            moved_by:receiver, note
+            moved_by:receiver, note, moved_at:movedAt
           }});
           if (short > 0) requests.push({ method:'POST', url:'/api/collections/movements/records', body:{
             id:TNSync.genId(), asset:'', item:line.item, quantity:short,
             from_location:this.manifest.from_location, to_location:MISSING_LOCATION,
-            moved_by:receiver, note:'Manifest #'+this.manifestNumber+' shortfall'+(line.condition_note ? ' · '+line.condition_note : '')
+            moved_by:receiver, moved_at:movedAt,
+            note:'Manifest #'+this.manifestNumber+' shortfall'+(line.condition_note ? ' · '+line.condition_note : '')
           }});
         }
       }

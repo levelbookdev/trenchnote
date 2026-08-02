@@ -453,7 +453,11 @@ function scanPage() {
         asset: row.assetId,
         from_location: row.locId || null,
         to_location: this.atLoc,
-        moved_by: localStorage.getItem('tn_name') || 'unspecified'
+        moved_by: localStorage.getItem('tn_name') || 'unspecified',
+        // Observation date stamped at capture (ADR 0023). Walk mode is the
+        // path most likely to run with no signal — a yard audit in a dead
+        // zone must not report every correction as happening on sync day.
+        moved_at: TNSync.today()
       };
       try {
         const res = await TN.fetch(`${PB}/api/collections/movements/records`, {

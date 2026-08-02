@@ -182,7 +182,7 @@
         <tbody>
           <template x-for="d in deliveries" :key="d.id">
             <tr>
-              <td x-text="fmtDate(d.created)"></td>
+              <td x-text="fmtDate(d.moved_at || d.created)"></td>
               <td x-show="mode === 'po'" x-text="d.expand?.item?.name || '?'"></td>
               <td class="qty" x-text="d.quantity"></td>
               <td x-text="d.expand?.to_location?.name || '?'"></td>
@@ -275,7 +275,7 @@ function receivingReport() {
     get appendix() {
       const out = [];
       for (const d of this.deliveries) {
-        const caption = this.fmtDate(d.created) + ' · ' + d.quantity + '× ' +
+        const caption = this.fmtDate(d.moved_at || d.created) + ' · ' + d.quantity + '× ' +
           (d.expand?.item?.name || '?') + ' at ' + (d.expand?.to_location?.name || '?') +
           (d.vendor_name ? ' · ' + d.vendor_name : '') +
           (d.po_number ? ' · PO ' + d.po_number : '') +
@@ -294,7 +294,11 @@ function receivingReport() {
     },
 
     fmtDate(iso) {
-      return new Date(iso).toLocaleDateString();
+      // Format in UTC. moved_at (ADR 0023) is date-only UTC midnight, so
+      // local formatting would show the PREVIOUS day in western zones — the
+      // standing trap the reservation/rental/reading dates all avoid.
+      // created is a UTC instant too, so its UTC date is right either way.
+      return new Date(iso).toLocaleDateString(undefined, { timeZone: 'UTC' });
     },
 
     async load() {
@@ -323,7 +327,11 @@ function receivingReport() {
         }
         const res = await TN.fetch(
           `${PB}/api/collections/movements/records` +
-          `?filter=(${encodeURIComponent(filter)})&expand=item,to_location&sort=created&perPage=500`);
+          // Ordered by the day the delivery was RECEIVED (moved_at, ADR 0023),
+          // falling back to created for rows that predate the field. Ascending,
+          // so empty moved_at sorts first — which is correct here, because
+          // every unstamped row predates the migration and is therefore older.
+          `?filter=(${encodeURIComponent(filter)})&expand=item,to_location&sort=moved_at,created&perPage=500`);
         if (!res.ok) throw new Error('could not load deliveries (' + res.status + ')');
         this.deliveries = (await res.json()).items;
 

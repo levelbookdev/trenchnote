@@ -93,7 +93,9 @@ inspection requirement, when supplied, to belong to the inspected asset.
 **CURRENT authoritative facts:**
 
 - A `movements` record is the authoritative statement that an asset or bulk
-  quantity moved. Corrections are additional movement records.
+  quantity moved. Corrections are additional movement records. Its `moved_at`
+  is the observation date when supplied (client-set, date-only UTC midnight);
+  `created` remains entry time, and derivations sort `-moved_at,-created`.
 - A `readings` record is the authoritative meter observation. Its `read_at`
   is the observation date when supplied; `created` remains entry time.
 - An `inspections` record is the authoritative inspection observation.

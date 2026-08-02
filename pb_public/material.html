@@ -335,7 +335,7 @@
               <div class="dlv-head"
                    x-text="d.quantity + ' → ' + locName(d.to_location)"></div>
               <div class="dlv-meta"
-                   x-text="fmtDate(d.created)
+                   x-text="fmtDate(d.moved_at || d.created)
                            + (d.vendor_name ? ' · ' + d.vendor_name : '')
                            + (d.po_number ? ' · PO ' + d.po_number : '')
                            + (d.moved_by ? ' · ' + d.moved_by : '')"></div>
@@ -430,7 +430,7 @@ function materialPage() {
 
     // The receiving log, straight from the already-loaded ledger:
     // receive-shaped movements (to set, from empty) of this item,
-    // newest first (the fetch sorts -created).
+    // newest first (the fetch sorts -moved_at,-created).
     get deliveries() {
       return this.movements.filter(m => m.to_location && !m.from_location);
     },
@@ -446,7 +446,11 @@ function materialPage() {
     },
 
     fmtDate(iso) {
-      return iso ? new Date(iso).toLocaleDateString() : 'queued on this phone';
+      // Format in UTC — moved_at (ADR 0023) is date-only UTC midnight and
+      // local formatting would show the previous day in western zones.
+      return iso
+        ? new Date(iso).toLocaleDateString(undefined, { timeZone: 'UTC' })
+        : 'queued on this phone';
     },
 
     // PocketBase file URL pattern: /api/files/{collection}/{recordId}/{filename}
@@ -474,7 +478,9 @@ function materialPage() {
           // Every bulk movement of THIS item. perPage caps at 500 — plenty
           // for years of a single material; revisit with paging if a ledger
           // ever outgrows it.
-          TN.fetch(`${PB}/api/collections/movements/records?filter=(item='${this.id}')&sort=-created&perPage=500`),
+          // Newest first by the day the move happened (moved_at, ADR 0023),
+          // falling back to created for rows that predate the field.
+          TN.fetch(`${PB}/api/collections/movements/records?filter=(item='${this.id}')&sort=-moved_at,-created&perPage=500`),
           TN.fetch(`${PB}/api/collections/manifest_lines/records?filter=(${mfFilter})&sort=created&perPage=100&expand=manifest.from_location,manifest.to_location`),
         ]);
         if (!itemRes.ok || !mfRes.ok) throw new Error('material not found (' + (itemRes.ok ? mfRes.status : itemRes.status) + ')');
@@ -522,7 +528,11 @@ function materialPage() {
         from_location: this.fromLoc || null,
         to_location: consuming ? null : this.toLoc,
         moved_by: this.movedBy || 'unspecified',
-        note: this.note || ''
+        note: this.note || '',
+        // Observation date, stamped at capture (ADR 0023) so a delivery
+        // received with no signal keeps its real received-day through the
+        // queue rather than the sync-day.
+        moved_at: TNSync.today()
       };
       // Receiving log (ADR 0013): dispute evidence rides on the delivery
       // itself. Transfers and consumes never carry these.
@@ -602,9 +612,13 @@ function materialPage() {
             po_number: movement.po_number || '',
             osd_note: movement.osd_note || '',
             moved_by: movement.moved_by
-            // no `created`, no `packing_slip`: the delivery-history row
-            // shows "queued on this phone" and the no-photo placeholder
-            // until the real record syncs.
+            // no `created`, no `moved_at`, no `packing_slip`: the
+            // delivery-history row shows "queued on this phone" and the
+            // no-photo placeholder until the real record syncs. moved_at IS
+            // set on the queued body (it has to be — that's the capture
+            // date); it is left off this optimistic row on purpose, so the
+            // row keeps saying "queued" instead of showing a date that
+            // implies the server already has it.
           });
           this.flash = doneMsg + ' — saved on this phone, will sync';
           clearForm();

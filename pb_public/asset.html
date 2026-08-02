@@ -993,8 +993,14 @@ function assetPage() {
     },
     historyMeta(row) {
       const who = row.move?.moved_by || row.event?.by || '';
-      return this.fmtWhen(row.created) +
-        (who && who !== 'unspecified' ? ' · ' + who : '');
+      // Show the day the move HAPPENED (ADR 0023). When it was captured
+      // offline and landed later, say so rather than picking one of the two
+      // days and hiding the other — the gap is exactly the fact a PM
+      // reconciling a timecard needs to see.
+      let when = this.fmtWhen(row.when || row.created);
+      const entered = this.fmtWhen(row.created);
+      if (row.when && when !== entered) when += ' · entered ' + entered;
+      return when + (who && who !== 'unspecified' ? ' · ' + who : '');
     },
 
     gaugeUrl(r) {
@@ -1086,7 +1092,7 @@ function assetPage() {
         const mvFilter = encodeURIComponent(`asset='${this.asset.id}'`);
         const ceFilter = encodeURIComponent(`asset_id='${this.asset.id}'`);
         const [mvRes, ceRes] = await Promise.all([
-          TN.fetch(`${PB}/api/collections/movements/records?filter=(${mvFilter})&sort=-created&perPage=100&expand=from_location,to_location`),
+          TN.fetch(`${PB}/api/collections/movements/records?filter=(${mvFilter})&sort=-moved_at,-created&perPage=100&expand=from_location,to_location`),
           TN.fetch(`${PB}/api/collections/container_events/records?filter=(${ceFilter})&sort=created&perPage=200&expand=container_id.item,location`),
         ]);
         this.moveHistory = (await mvRes.json()).items;
@@ -1098,14 +1104,18 @@ function assetPage() {
           const cmFilter = encodeURIComponent(
             containerIds.map(id => `asset='${id}'`).join(' || '));
           const cmRes = await TN.fetch(
-            `${PB}/api/collections/movements/records?filter=(${cmFilter})&sort=-created&perPage=500&expand=from_location,to_location`
+            `${PB}/api/collections/movements/records?filter=(${cmFilter})&sort=-moved_at,-created&perPage=500&expand=from_location,to_location`
           );
           if (!cmRes.ok) throw new Error('container history API error ' + cmRes.status);
           containerMoves = (await cmRes.json()).items;
         }
         this.historyRows = TNContainers.locationHistory(
           this.moveHistory, this.containerEvents, containerMoves);
-        const since = new Date(this.historyRows[0]?.created || this.asset.created);
+        // "Days here" counts from when the move HAPPENED (row.when =
+        // moved_at, falling back to created — ADR 0023), not when it reached
+        // the server. A move synced three days late must not reset the
+        // counter to zero.
+        const since = new Date(this.historyRows[0]?.when || this.historyRows[0]?.created || this.asset.created);
         this.daysHere = Math.floor((Date.now() - since) / 86400000);
 
         // Any truck manifest currently carrying this asset. The relation
@@ -1332,7 +1342,12 @@ function assetPage() {
         asset: this.asset.id,
         from_location: this.effectiveLocationId || null,
         to_location: this.moveTo,
-        moved_by: this.movedBy || 'unspecified'
+        moved_by: this.movedBy || 'unspecified',
+        // The observation date, stamped NOW at capture (ADR 0023) so a move
+        // made in a dead zone carries its real move-day through the queue
+        // instead of the sync-day. Built into the body once, so the online
+        // POST and the offline replay send the identical record.
+        moved_at: TNSync.today()
       };
 
       try {

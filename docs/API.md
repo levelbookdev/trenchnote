@@ -41,6 +41,19 @@ Highlights that are load-bearing for API clients:
 - **`movements` is an append-only ledger** (ADR 0002). No client — premium,
   third-party, or future core code — can ever update or delete a movement.
   Corrections are new records.
+- **`movements.moved_at` (ADR 0023):** the observation date — the day the move
+  actually happened — as an optional `date`, client-set, date-only at UTC
+  midnight (format in UTC). Empty means unknown and derivations **fall back to
+  `created`**, which still records system-entry time. Set at capture so a move
+  logged offline keeps its real move-day through the queue instead of the sync
+  day. Migration `1783468826`; **additive to contract v1** (see Versioning),
+  same shape and reasoning as `readings.read_at` and `inspections.inspected_at`.
+  **Clients that order movements by time should mirror
+  `sort=-moved_at,-created`** — ordering by `-created` alone gives sync order,
+  not move order. The `created` tiebreak matters: `moved_at` is date-only, so
+  moves made on the same day share a stamp and need `created` to keep their
+  sequence. `moved_at` is covered by the append-only rule like every other
+  field: a wrong date is corrected with a new movement.
 - **Receiving-log fields on movements (ADR 0013, additive):**
   `vendor_name`, `po_number`, `osd_note` (all free text), `packing_slip`
   (file, max 1) and `photos` (file, max 8) — dispute evidence meant for

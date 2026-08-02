@@ -133,12 +133,47 @@ For bulk moves, the locations then say *which kind* of move it is:
 Asset moves always require a `to_location` — a physical machine lands
 somewhere. All of these shapes are enforced **server-side** by the
 collection's `createRule` (migrations `1783468805`–`1783468807`), so no
-client can write a malformed row. The timestamp is the `created` autodate
-field.
+client can write a malformed row.
+
+**Two timestamps, and they answer different questions (ADR 0023).** `created`
+is the `created` autodate — when the row reached the server. `moved_at` is the
+day the move actually *happened*: an optional `date`, client-set, date-only at
+UTC midnight, added by migration `1783468826`. Empty means unknown and every
+derivation falls back to `created`.
+
+The distinction exists because of the offline queue. A move logged in a dead
+zone on Friday and synced Monday used to be stamped Monday, which put the
+asset at the wrong location all weekend — and, through the timecard handoff
+(ADR 0022), at the wrong job number on a billing document. Same shape and
+reasoning as `readings.read_at` (ADR 0016) and `inspections.inspected_at`
+(ADR 0014).
+
+Three rules follow from it:
+
+- **Stamp at capture, not at replay.** Movement bodies are built once with a
+  pre-generated id so the identical record can be POSTed now or replayed from
+  IndexedDB (ADR 0008); `moved_at` is set when that body is built, via the
+  shared `TNSync.today()` helper. `TNSync.enqueue` backfills it for any caller
+  that forgot. `manifest.html` must stamp explicitly — its batch goes through
+  `enqueueBatch`, which has no per-movement backfill.
+- **Sort `-moved_at,-created`,** never `-created` alone. The `created` tiebreak
+  is load-bearing, not decorative: `moved_at` is date-only, so every move made
+  on a given day carries an identical stamp, and without the tiebreak an A→B
+  then B→C on the same afternoon would lose its order.
+- **Format in UTC.** `moved_at` is midnight UTC, so a formatter without
+  `timeZone: 'UTC'` shows the previous day in western zones — the same trap the
+  reservation, rental, and reading dates avoid.
+
+`tn-containers.js` carries two clocks on purpose. Its history rows expose
+`when` (= `moved_at` falling back to `created`) for ordering and display, but
+membership windowing still compares `created`, because `container_events` has
+no observation date and matching a date-only stamp against an event's full
+timestamp would misjudge which side of an add/remove a move fell on.
 
 `updateRule` and `deleteRule` are `null` (admin-only) **even in the
 permissive Phase 1** — a ledger you can rewrite is not a ledger. Corrections
-are new movement records.
+are new movement records, `moved_at` included: a wrong observation date is
+fixed with a new movement, never an edit.
 
 **Receiving-log fields (ADR 0013):** five optional fields carry dispute
 evidence on deliveries — `vendor_name`, `po_number` (free text a human

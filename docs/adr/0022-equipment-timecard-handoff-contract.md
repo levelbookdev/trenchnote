@@ -9,9 +9,10 @@
 > changes code, migrations, or endpoints. Still outstanding — a matching
 > accepted ADR in `bindery-trenchnote` (the consumer half of step 4), then a
 > published versioned contract with compatibility tests (steps 5–6). **Open
-> issue 3 below should be resolved in core before any version is frozen**, since
-> it corrupts segment boundaries rather than merely weakening identity; it is
-> broken out as [task 020](../tasks/020-movement-observation-date.md).
+> issue 3 below has since been resolved** by
+> [ADR 0023](0023-movement-observation-date.md) (`movements.moved_at`), which
+> was the stated gate on freezing a version. Open issues 1, 2, 4 and 5 remain,
+> and are survivable as documented caveats.
 
 ## Context
 
@@ -165,7 +166,16 @@ These are named, not solved. Each is a decision for its own ADR.
    identity. Replay safety rests on `manifest_public_id` + `revision` instead.
    Fixing this properly means minting public ids on those collections: a
    migration, an ADR, and a decision this proposal does not make.
-3. **Movements have no observation date.** `readings` got `read_at` (ADR 0016)
+3. **~~Movements have no observation date.~~ RESOLVED 2026-08-02 by
+   [ADR 0023](0023-movement-observation-date.md)** — `movements.moved_at`
+   (migration `1783468826`) is the client-set observation date this issue asked
+   for, and segment boundaries now derive from the day a move happened. The
+   original statement is kept below for the record. The fixtures in
+   `../contracts/timecard-handoff/` still carry full timestamps in
+   `arrived_at`/`departed_at` and are due a regeneration when the contract is
+   next revised.
+
+   `readings` got `read_at` (ADR 0016)
    and `inspections` got `inspected_at` (ADR 0014), both client-set, both for
    the same stated reason: the math must survive offline queues and back-entry.
    `movements` never got the equivalent — its only timestamp is `created`,
@@ -213,9 +223,9 @@ These are named, not solved. Each is a decision for its own ADR.
   contract bump. Acceptance settles a shape; the core is otherwise unaffected.
 - The contract is **assemblable today** by any client from `movements`,
   `readings`, `assets`, `locations`, and `items` — but three of the five open
-  issues above (1, 2, 3) mean a v1 frozen now would carry known accuracy
-  caveats. Open issue 3 is the blocking one and is now
-  [task 020](../tasks/020-movement-observation-date.md); issues 1 and 2 remain
+  issues above (1, 2, 3) meant a v1 frozen at proposal time would carry known
+  accuracy caveats. Open issue 3, the blocking one, is resolved by
+  [ADR 0023](0023-movement-observation-date.md); issues 1 and 2 remain
   unscheduled and are survivable as documented caveats.
 - This ADR obliges a matching accepted ADR in `bindery-trenchnote` (the consumer
   half of promotion path step 4) before either side implements.
