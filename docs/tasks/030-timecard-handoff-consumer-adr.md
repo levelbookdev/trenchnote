@@ -1,6 +1,10 @@
 # 030 — Consumer-side decision record for the timecard handoff (bindery-trenchnote)
 
-Status: BLOCKED (executes in the `bindery-trenchnote` repo, not this one — see Scope)
+Status: DONE (executed in the `bindery-trenchnote` repo, not this one — see Scope).
+Delivered 2026-08-02 as that repo's accepted decision record
+`docs/decisions/0009-equipment-timecard-handoff-consumer.md`. Promotion-path
+step 4 is now complete on both halves; steps 5–6 (a published versioned
+contract plus compatibility tests) are unblocked and are their own task.
 
 ## Context
 
