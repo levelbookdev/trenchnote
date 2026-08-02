@@ -1,0 +1,167 @@
+{
+  "manifest_public_id": "trenchnote:acme-water:equipment.timecard_period:2026-06",
+  "manifest_version": "equipment-timecard-handoff/1",
+  "revision": 2,
+  "revision_note": "regenerated 2026-07-02 after an offline-queued movement synced late (ADR 0008); supersedes revision 1 for the same manifest_public_id",
+  "handoff_type": "equipment.timecard_period",
+  "producer": {
+    "issuer": "trenchnote",
+    "instance": "acme-water",
+    "product": "TrenchNote",
+    "product_version": "1.4.0",
+    "pocketbase_version": "0.22.21"
+  },
+  "produced_at": "2026-07-02T09:15:44Z",
+  "period": {
+    "start": "2026-06-01",
+    "end": "2026-06-30",
+    "date_basis": "date-only at UTC midnight; end inclusive"
+  },
+  "assets": [
+    {
+      "subject_ref": {
+        "source": "trenchnote:acme-water",
+        "object_type": "asset",
+        "public_id": "P-138",
+        "display_code": "P-138",
+        "contract_version": "equipment-timecard-handoff/1",
+        "source_url": "https://trenchnote.example.com/asset.html?code=P-138",
+        "local_record_id": "b4c6d8e1f3g5h7j",
+        "local_record_id_note": "instance-scoped PocketBase id; not a stable public id (open issue 2)"
+      },
+      "catalog": {
+        "item_name": "3/4-Ton Crew Pickup",
+        "meter": "odometer"
+      },
+      "ownership": "owned",
+      "assigned_to": "T. Okafor",
+      "segments": [
+        {
+          "segment_index": 0,
+          "project_ref": {
+            "issuer": "trenchnote:acme-water",
+            "project_public_id": null,
+            "project_code": "6054.2",
+            "project_name": "Riverbend WWTP — Headworks",
+            "source_url": null,
+            "note": "project_public_id is null: TrenchNote has no project entity (open issue 1)"
+          },
+          "location_ref": {
+            "source": "trenchnote:acme-water",
+            "object_type": "location",
+            "public_id": null,
+            "display_code": "Riverbend WWTP",
+            "location_type": "jobsite",
+            "local_record_id": "m8n2p4q6r1s3t5v"
+          },
+          "arrived_at": "2026-04-30T16:05:12Z",
+          "arrived_before_period": true,
+          "arrival_movement_ref": {
+            "source": "trenchnote:acme-water",
+            "object_type": "movement",
+            "public_id": null,
+            "local_record_id": "q3r5s7t9v1w3x5y",
+            "recorded_at": "2026-04-30T16:05:12Z",
+            "moved_by": "T. Okafor"
+          },
+          "departed_at": null,
+          "departure_movement_ref": null,
+          "present_at_period_end": true,
+          "derived_from": "movements"
+        }
+      ],
+      "readings": [
+        {
+          "subject_ref": {
+            "source": "trenchnote:acme-water",
+            "object_type": "reading",
+            "public_id": null,
+            "local_record_id": "z7a9b1c3d5e7f9g"
+          },
+          "value": 48210,
+          "reading_type": "odometer",
+          "read_at": "2026-06-01",
+          "recorded_at": "2026-06-01T12:44:02Z",
+          "recorded_by": "T. Okafor",
+          "read_at_source": "read_at",
+          "evidence_refs": [],
+          "flags": []
+        },
+        {
+          "subject_ref": {
+            "source": "trenchnote:acme-water",
+            "object_type": "reading",
+            "public_id": null,
+            "local_record_id": "h2j4k6l8m1n3p5q"
+          },
+          "value": 4835,
+          "reading_type": "odometer",
+          "read_at": "2026-06-15",
+          "recorded_at": "2026-06-15T11:20:38Z",
+          "recorded_by": "T. Okafor",
+          "read_at_source": "read_at",
+          "evidence_refs": [],
+          "flags": ["lower_than_previous"],
+          "flag_note": "Legal data, not an error to drop (API.md). Almost certainly a dropped digit for 48350; a correction is a new reading, never an edit (ADR 0012)."
+        },
+        {
+          "subject_ref": {
+            "source": "trenchnote:acme-water",
+            "object_type": "reading",
+            "public_id": null,
+            "local_record_id": "r6s8t1v3w5x7y9z"
+          },
+          "value": 48730,
+          "reading_type": "odometer",
+          "read_at": "2026-06-30",
+          "recorded_at": "2026-07-01T02:11:09Z",
+          "recorded_by": "T. Okafor",
+          "read_at_source": "read_at",
+          "read_at_note": "month-end walkdown reading; captured 2026-06-30 offline, synced 2026-07-01. read_at preserves the observation day (ADR 0016), created does not.",
+          "evidence_refs": ["trenchnote:acme-water:file:readings/r6s8t1v3w5x7y9z/gauge_0630.jpg"],
+          "flags": []
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_public_id": "trenchnote:acme-water:file:readings/r6s8t1v3w5x7y9z/gauge_0630.jpg",
+      "subject_ref": {
+        "source": "trenchnote:acme-water",
+        "object_type": "reading",
+        "public_id": null,
+        "local_record_id": "r6s8t1v3w5x7y9z"
+      },
+      "kind": "reading_image",
+      "captured_at": "2026-06-30",
+      "entered_at": "2026-07-01T02:11:09Z",
+      "captured_by": "T. Okafor",
+      "captured_by_assurance": "free_text_unverified",
+      "media_type": "image/jpeg",
+      "size_bytes": 418223,
+      "sha256": null,
+      "source_url": "https://trenchnote.example.com/api/files/readings/r6s8t1v3w5x7y9z/gauge_0630.jpg",
+      "source_url_note": "authenticated endpoint; retrieval requires the consumer's own service-account token (ADR 0011). Authorization and expiry rules are unresolved.",
+      "provenance": "original"
+    }
+  ],
+  "summary": {
+    "asset_count": 1,
+    "segment_count": 1,
+    "reading_count": 3,
+    "distinct_project_codes": ["6054.2"],
+    "readings_flagged": 1,
+    "month_end_reading": {
+      "asset_public_id": "P-138",
+      "read_at": "2026-06-30",
+      "value": 48730,
+      "reading_type": "odometer"
+    }
+  },
+  "integrity": {
+    "canonicalization": null,
+    "manifest_sha256": null,
+    "note": "hashing rules are not yet accepted (ecosystem-contracts.md, evidence envelope open issues)"
+  }
+}

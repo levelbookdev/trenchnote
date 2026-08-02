@@ -1,6 +1,6 @@
 # 010 — Draft the equipment-timecard handoff contract (PROPOSED)
 
-Status: TODO
+Status: DONE
 
 ## Context
 

@@ -1,0 +1,128 @@
+{
+  "manifest_public_id": "trenchnote:acme-water:equipment.timecard_period:2026-W26",
+  "manifest_version": "equipment-timecard-handoff/1",
+  "revision": 1,
+  "handoff_type": "equipment.timecard_period",
+  "producer": {
+    "issuer": "trenchnote",
+    "instance": "acme-water",
+    "product": "TrenchNote",
+    "product_version": "1.4.0",
+    "pocketbase_version": "0.22.21"
+  },
+  "produced_at": "2026-06-29T13:02:11Z",
+  "period": {
+    "start": "2026-06-22",
+    "end": "2026-06-28",
+    "date_basis": "date-only at UTC midnight; end inclusive"
+  },
+  "assets": [
+    {
+      "subject_ref": {
+        "source": "trenchnote:acme-water",
+        "object_type": "asset",
+        "public_id": "FL-16",
+        "display_code": "FL-16",
+        "contract_version": "equipment-timecard-handoff/1",
+        "source_url": "https://trenchnote.example.com/asset.html?code=FL-16",
+        "local_record_id": "k2j4h1g9f7d3s5a",
+        "local_record_id_note": "instance-scoped PocketBase id; not a stable public id (open issue 2)"
+      },
+      "catalog": {
+        "item_name": "5,000 lb Rough-Terrain Forklift",
+        "meter": "hours"
+      },
+      "ownership": "owned",
+      "assigned_to": "",
+      "segments": [
+        {
+          "segment_index": 0,
+          "project_ref": {
+            "issuer": "trenchnote:acme-water",
+            "project_public_id": null,
+            "project_code": "6054.2",
+            "project_name": "Riverbend WWTP — Headworks",
+            "source_url": null,
+            "note": "project_public_id is null: TrenchNote has no project entity (open issue 1)"
+          },
+          "location_ref": {
+            "source": "trenchnote:acme-water",
+            "object_type": "location",
+            "public_id": null,
+            "display_code": "Riverbend WWTP",
+            "location_type": "jobsite",
+            "local_record_id": "m8n2p4q6r1s3t5v"
+          },
+          "arrived_at": "2026-06-15T14:22:07Z",
+          "arrived_before_period": true,
+          "arrival_movement_ref": {
+            "source": "trenchnote:acme-water",
+            "object_type": "movement",
+            "public_id": null,
+            "local_record_id": "w7x9y1z3a5b7c9d",
+            "recorded_at": "2026-06-15T14:22:07Z",
+            "moved_by": "R. Alvarez"
+          },
+          "departed_at": "2026-06-25T07:41:55Z",
+          "departure_movement_ref": {
+            "source": "trenchnote:acme-water",
+            "object_type": "movement",
+            "public_id": null,
+            "local_record_id": "e1f3g5h7j9k2l4m",
+            "recorded_at": "2026-06-25T07:41:55Z",
+            "moved_by": "D. Whitfield"
+          },
+          "present_at_period_end": false,
+          "derived_from": "movements"
+        },
+        {
+          "segment_index": 1,
+          "project_ref": {
+            "issuer": "trenchnote:acme-water",
+            "project_public_id": null,
+            "project_code": "6119.1",
+            "project_name": "Northgate Lift Station",
+            "source_url": null,
+            "note": "project_public_id is null: TrenchNote has no project entity (open issue 1)"
+          },
+          "location_ref": {
+            "source": "trenchnote:acme-water",
+            "object_type": "location",
+            "public_id": null,
+            "display_code": "Northgate Lift Station",
+            "location_type": "jobsite",
+            "local_record_id": "n6p8q1r3s5t7v9w"
+          },
+          "arrived_at": "2026-06-25T07:41:55Z",
+          "arrived_before_period": false,
+          "arrival_movement_ref": {
+            "source": "trenchnote:acme-water",
+            "object_type": "movement",
+            "public_id": null,
+            "local_record_id": "e1f3g5h7j9k2l4m",
+            "recorded_at": "2026-06-25T07:41:55Z",
+            "moved_by": "D. Whitfield"
+          },
+          "departed_at": null,
+          "departure_movement_ref": null,
+          "present_at_period_end": true,
+          "derived_from": "movements"
+        }
+      ],
+      "readings": []
+    }
+  ],
+  "evidence": [],
+  "summary": {
+    "asset_count": 1,
+    "segment_count": 2,
+    "reading_count": 0,
+    "distinct_project_codes": ["6054.2", "6119.1"],
+    "assets_with_multiple_segments": 1
+  },
+  "integrity": {
+    "canonicalization": null,
+    "manifest_sha256": null,
+    "note": "hashing rules are not yet accepted (ecosystem-contracts.md, evidence envelope open issues)"
+  }
+}
