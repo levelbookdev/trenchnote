@@ -1,13 +1,17 @@
 # ADR 0022 — Equipment-timecard handoff contract (producer side)
 
-**Status:** proposed · **Date:** 2026-08-02
+**Status:** accepted · **Date:** 2026-08-02
 
-> **This is step one of the promotion path** in
-> [ecosystem-contracts.md](../ecosystem-contracts.md) — a written proposal for
-> review. Nothing here is binding, no contract version is published, and no
-> code, migration, or endpoint changes. Steps 2–6 (fixture validation against a
-> real instance, an accepted ADR in each affected repo, a published versioned
-> contract plus compatibility tests) are gated on the maintainer accepting this.
+> **Accepted on the producer side.** This settles the *shape* of the handoff —
+> promotion path step 4 in
+> [ecosystem-contracts.md](../ecosystem-contracts.md), for this repository only.
+> It is **not** a published contract: no version is frozen, and nothing here
+> changes code, migrations, or endpoints. Still outstanding — a matching
+> accepted ADR in `bindery-trenchnote` (the consumer half of step 4), then a
+> published versioned contract with compatibility tests (steps 5–6). **Open
+> issue 3 below should be resolved in core before any version is frozen**, since
+> it corrupts segment boundaries rather than merely weakening identity; it is
+> broken out as [task 020](../tasks/020-movement-observation-date.md).
 
 ## Context
 
@@ -206,15 +210,14 @@ These are named, not solved. Each is a decision for its own ADR.
 ## Consequences
 
 - **Nothing ships.** No migration, no endpoint, no `sw.js` change, no API
-  contract bump. If this proposal is never accepted, the core is unaffected.
+  contract bump. Acceptance settles a shape; the core is otherwise unaffected.
 - The contract is **assemblable today** by any client from `movements`,
   `readings`, `assets`, `locations`, and `items` — but three of the five open
-  issues above (1, 2, 3) mean a v1 built now would carry known accuracy caveats.
-  Open issue 3 in particular is worth fixing in core *before* freezing a version,
-  since it corrupts segment boundaries rather than merely weakening identity.
-- Accepting this ADR obliges a matching accepted ADR in `bindery-trenchnote`
-  (promotion path step 4) before either side implements.
-- `docs/documentation-index.md` is deliberately **not** updated: its table lists
-  accepted ADRs, and this one is proposed.
-- If accepted, the fixtures here become the seed of the compatibility test suite
-  that travels with the published contract (step 5).
+  issues above (1, 2, 3) mean a v1 frozen now would carry known accuracy
+  caveats. Open issue 3 is the blocking one and is now
+  [task 020](../tasks/020-movement-observation-date.md); issues 1 and 2 remain
+  unscheduled and are survivable as documented caveats.
+- This ADR obliges a matching accepted ADR in `bindery-trenchnote` (the consumer
+  half of promotion path step 4) before either side implements.
+- The fixtures here become the seed of the compatibility test suite that travels
+  with the published contract (step 5).

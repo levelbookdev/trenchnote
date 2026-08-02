@@ -65,10 +65,20 @@ in [CLAUDE.md](CLAUDE.md).
   contract** (movements + readings → `bindery-trenchnote`). This is committed
   direction now, not a maybe. The core keeps BACKLOG item 7 minimal (it exposes
   clean append-only data); the sidecar composes the timecard + rates. First
-  concrete step — a *proposed* contract ADR + example fixtures in this repo,
-  per the promotion path in
-  [docs/ecosystem-contracts.md](docs/ecosystem-contracts.md) — is broken out as
-  [docs/tasks/010-timecard-handoff-contract.md](docs/tasks/010-timecard-handoff-contract.md).
+  concrete step — a contract ADR + example fixtures in this repo, per the
+  promotion path in
+  [docs/ecosystem-contracts.md](docs/ecosystem-contracts.md) — was broken out as
+  [docs/tasks/010-timecard-handoff-contract.md](docs/tasks/010-timecard-handoff-contract.md)
+  and is **done**: [ADR 0022](docs/adr/0022-equipment-timecard-handoff-contract.md)
+  is accepted on the producer side (2026-08-02), with fixtures in
+  `docs/contracts/timecard-handoff/`.
+  - Still outstanding on the promotion path: a matching accepted ADR in
+    `bindery-trenchnote` (the consumer half of step 4), then a published
+    versioned contract with compatibility tests (steps 5–6).
+  - **Gate before freezing a version:** ADR 0022 open issue 3 — `movements` has
+    no client-set observation date, so an offline move synced late lands its
+    segment boundary on the sync day. Broken out as
+    [docs/tasks/020-movement-observation-date.md](docs/tasks/020-movement-observation-date.md).
 - **Contributions are gated by a DCO sign-off, not a CLA** — the maintainer is
   an individual, not a company. See ADR 0011 and
   [CONTRIBUTING.md](CONTRIBUTING.md).
