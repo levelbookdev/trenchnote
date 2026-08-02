@@ -72,13 +72,18 @@ in [CLAUDE.md](CLAUDE.md).
   and is **done**: [ADR 0022](docs/adr/0022-equipment-timecard-handoff-contract.md)
   is accepted on the producer side (2026-08-02), with fixtures in
   `docs/contracts/timecard-handoff/`.
-  - Still outstanding on the promotion path: a matching accepted ADR in
-    `bindery-trenchnote` (the consumer half of step 4), then a published
-    versioned contract with compatibility tests (steps 5–6).
-  - **Gate before freezing a version:** ADR 0022 open issue 3 — `movements` has
-    no client-set observation date, so an offline move synced late lands its
-    segment boundary on the sync day. Broken out as
+  - Next on the promotion path: the matching accepted decision record in
+    `bindery-trenchnote` (the consumer half of step 4), specified as
+    [docs/tasks/030-timecard-handoff-consumer-adr.md](docs/tasks/030-timecard-handoff-consumer-adr.md)
+    — filed `BLOCKED` here because it executes in that repo, not this one.
+    After both halves are accepted: a published versioned contract with
+    compatibility tests (steps 5–6).
+  - **The gate on freezing a version is cleared.** ADR 0022 open issue 3
+    (`movements` had no client-set observation date, so an offline move synced
+    late landed its segment boundary on the sync day) is resolved by
+    [ADR 0023](docs/adr/0023-movement-observation-date.md) via
     [docs/tasks/020-movement-observation-date.md](docs/tasks/020-movement-observation-date.md).
+    Open issues 1, 2, 4 and 5 remain as documented caveats.
 - **Contributions are gated by a DCO sign-off, not a CLA** — the maintainer is
   an individual, not a company. See ADR 0011 and
   [CONTRIBUTING.md](CONTRIBUTING.md).

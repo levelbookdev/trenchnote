@@ -34,6 +34,15 @@ build something and approved breaking it down.
 - **Status line** is the first content line of every task file and is one of:
   `TODO` · `IN PROGRESS` · `DONE` · `BLOCKED (reason)`. A session can find the
   next actionable task by scanning status lines alone.
+- **Cross-repo tasks are filed `BLOCKED`.** Occasionally a task is *specified*
+  here but *executed* in a sibling repository — an ecosystem contract commits
+  the consumer side to something, and the producer side needs to see what it
+  asked for (e.g. `030`). Those carry
+  `BLOCKED (executes in <repo>, not this one)`, because `BLOCKED` is the only
+  status that stops an execution session in *this* repo from picking the task
+  up and editing a repository it was never pointed at. The reason string, not
+  the status word, carries the truth: the work may be perfectly ready to start —
+  just not from here.
 
 ## Creating a task
 
