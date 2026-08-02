@@ -86,6 +86,21 @@ formats vary), and `notify_email`, the PM/super to notify when equipment
 leaves this location. An asset's "current job" is **derived** — its
 current location's `job_code` — never stored anywhere.
 
+**Never repurpose a location record for a different project.** When a job
+closes out, create a *new* location for the next one rather than renaming
+this one and changing its `job_code`. Because the job is derived from the
+location's code *as it reads right now*, and that field is mutable with no
+history, editing it rewrites every past answer: the movements ledger still
+says correctly where the asset was, but every derivation of *which job it
+was billed to* changes retroactively — including closed periods that already
+went to accounting. Fixing a typo'd code in place is fine and wanted; that
+corrects history instead of falsifying it. Reuse is the hazard.
+
+Nothing in the schema enforces this today — it is an operating rule. The
+real fix is a stable project reference (ADR 0022 open issue 1, BACKLOG
+item 4), which is why `job_code` travels in the timecard handoff as a
+*label for reconciliation, never as identity*.
+
 ### assets — a specific physical thing
 
 Belongs to an item, carries `tag_code` (short, human-readable, **unique

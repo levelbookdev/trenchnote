@@ -60,8 +60,15 @@ immutability. No explicit `corrects` or `supersedes` link exists.
 ### Observation time and entry time remain distinct where field date matters
 
 **CONFIRMED CURRENT:** inspections keep client-set `inspected_at` and server-set
-`created`; readings keep optional client-set `read_at` and server-set `created`.
-Offline replay must preserve the observation date.
+`created`; readings keep optional client-set `read_at` and server-set `created`;
+movements keep optional client-set `moved_at` and server-set `created` (ADR 0023,
+migration 1783468826). Offline replay must preserve the observation date — it is
+stamped at capture, never recomputed on replay.
+
+All three ledgers now hold this shape. Where the observation date is optional,
+derivations fall back to `created` and sort with it as the tiebreak
+(`-moved_at,-created`, `-read_at,-created`), because a date-only observation
+stamp cannot order two records made on the same day by itself.
 
 ### Derived inspection status is not stored
 
@@ -146,6 +153,18 @@ itself. Markdown documentation changes do not.
   unit-of-measure field.
 - The REST contract is versioned as v1, but individual records do not carry a
   contract-version field.
+- **A location record is never repurposed for a different project.** When a job
+  closes out, create a *new* location for the next one — do not rename an
+  existing location and change its `job_code`. An asset's job is **derived** from
+  its current location's `job_code` (ADR 0012) and that field is mutable with no
+  history, so editing it silently rewrites every past answer: the ledger still
+  says where the asset was, but every derivation of *which job it was billed to*
+  changes retroactively, including closed periods that already fed accounting.
+  Correcting a typo'd `job_code` in place is fine and desirable — that fixes
+  history rather than falsifying it. Reusing the record for a different job is
+  the hazard. This is an **operating rule, not a server rule**: nothing in the
+  schema enforces it today. See ADR 0022 open issue 1 and BACKLOG item 4, where
+  a stable project reference is the eventual fix.
 
 ## Desired future invariants
 
