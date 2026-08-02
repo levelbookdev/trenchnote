@@ -132,6 +132,15 @@ first_id() {
     -H "Authorization: ${TOKEN:-}" \
     | sed -n 's/.*"id":"\([a-z0-9]\{15\}\)".*/\1/p' | head -1
 }
+# first_id_sorted COLLECTION FILTER SORT  -> first matching id under SORT.
+# Separate from first_id because the ordering IS the thing under test in the
+# moved_at tiebreak assertion (ADR 0023).
+first_id_sorted() {
+  curl -s -G "$BASE/api/collections/$1/records" \
+    --data 'perPage=1' --data-urlencode "filter=$2" --data-urlencode "sort=$3" \
+    -H "Authorization: ${TOKEN:-}" \
+    | sed -n 's/.*"id":"\([a-z0-9]\{15\}\)".*/\1/p' | head -1
+}
 # post COLLECTION JSON  -> creates a record, echoes its id. Aborts the run on
 # failure: these are the fixtures the later assertions stand on.
 post() {
@@ -514,6 +523,22 @@ accepted "movement without moved_at still accepted (optional)" \
 #     rest of the ledger: a wrong date is corrected with a NEW movement.
 rejected "moved_at cannot be changed by a later update" \
   "$(patch_status movements "$MV_STAMPED" '{"moved_at":"2020-01-01"}')"
+
+# (d) the `created` tiebreak keeps same-day moves in sequence.
+#     moved_at is DATE-ONLY, so every move made on one day carries an
+#     identical stamp. Sorting by -moved_at alone would leave two moves of the
+#     same thing on the same afternoon in arbitrary order -- an A->B then B->C
+#     could render as C then B, and the asset's history would read backwards.
+#     This is why the documented client sort is `-moved_at,-created` and not
+#     `-moved_at`. Asserted directly, because the second term looks redundant
+#     and is the most likely thing for a future refactor to drop.
+MV_FIRST=$(post movements \
+  "{\"item\":\"$BULK\",\"quantity\":1,\"to_location\":\"$YARD\",\"moved_at\":\"$TODAY\",\"note\":\"smoke sameday first\"}")
+MV_SECOND=$(post movements \
+  "{\"item\":\"$BULK\",\"quantity\":1,\"to_location\":\"$SITE\",\"moved_at\":\"$TODAY\",\"note\":\"smoke sameday second\"}")
+equals "same-day moves keep their sequence under -moved_at,-created" \
+  "$MV_SECOND" \
+  "$(first_id_sorted movements "note~'smoke sameday'" '-moved_at,-created')"
 
 # ---- report -----------------------------------------------------------------
 echo ""
