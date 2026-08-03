@@ -121,18 +121,18 @@ The decision record must state how Bindery TrenchNote **consumes** the
 
 ## Acceptance criteria
 
-- [ ] `docs/decisions/0009-equipment-timecard-handoff-consumer.md` exists in
+- [x] `docs/decisions/0009-equipment-timecard-handoff-consumer.md` exists in
       `bindery-trenchnote`, `Status: accepted`, house format, numbered 0009.
-- [ ] All seven specification points above are addressed explicitly. Open issues
+- [x] All seven specification points above are addressed explicitly. Open issues
       are stated as behavior-under-uncertainty, **not** described as solved.
-- [ ] It carries no proposal to change core schema, and no core files are
+- [x] It carries no proposal to change core schema, and no core files are
       modified. `git status` in the `trenchnote` repo is clean afterwards.
-- [ ] No importer code: `lookahead.js`, `watchdog.js`, `lib/`, and
+- [x] No importer code: `lookahead.js`, `watchdog.js`, `lib/`, and
       `package.json` are untouched.
-- [ ] It is consistent with that repo's decisions `0001`, `0004`, `0006`, `0008`
+- [x] It is consistent with that repo's decisions `0001`, `0004`, `0006`, `0008`
       — cite them where they bind, and if any genuinely conflicts, **stop and
       raise it** rather than quietly overriding a prior accepted decision.
-- [ ] Committed in `bindery-trenchnote` (author: maintainer only, **no
+- [x] Committed in `bindery-trenchnote` (author: maintainer only, **no
       `Co-Authored-By` trailer**).
 
 ## Guardrails
@@ -154,10 +154,36 @@ The decision record must state how Bindery TrenchNote **consumes** the
 
 ## Definition of done
 
-- [ ] Acceptance criteria all checked.
-- [ ] Docs-as-code per that repo's own `CLAUDE.md` (its ROADMAP / ARCHITECTURE
+- [x] Acceptance criteria all checked.
+- [x] Docs-as-code per that repo's own `CLAUDE.md` (its ROADMAP / ARCHITECTURE
       updated if this changes what is shipped there).
-- [ ] Committed in `bindery-trenchnote`, then **come back to this repo** and set
+- [x] Committed in `bindery-trenchnote`, then **come back to this repo** and set
       this file's `Status:` to `DONE` in its own small commit, so the producer
       side records that step 4 is complete on both halves.
-- [ ] Then stop and show the maintainer.
+- [x] Then stop and show the maintainer.
+
+### Completion notes — two deviations, both deliberate
+
+- **Two files changed in `bindery-trenchnote`, not one.** Besides the decision
+  record, `docs/ROADMAP.md` gained two open threads (build the importer; the
+  idle-detection scan still sorts `-created`, which is sync-order). That repo's
+  `CLAUDE.md` makes ROADMAP the source of truth for open threads, so the
+  docs-as-code criterion above required it. Nothing else was touched:
+  `lookahead.js`, `watchdog.js`, `lib/`, `package.json`, and the terms file are
+  untouched, as the scope demanded.
+- **The only core file modified is this one.** Acceptance criterion 3 forbids
+  core changes from the consumer work, and none were made; the `Status:` flip
+  and these checkboxes are this task's own Definition of Done, committed
+  separately from the consumer work exactly as instructed.
+
+**One thing to review in the consumer record:** ADR 0022 settled a shape but
+ships no generator, so Bindery assembles the manifest itself from contract reads
+— which the ADR explicitly permits ("assemblable today by any client"), but
+which leaves nobody to assign `revision`. Decision 0009 fills that with a
+content-hash rule: re-assemble, canonicalize, hash; equal hash means the same
+revision and a no-op reconcile, a different hash means the next integer, which
+replaces. Replacement by `(manifest_public_id, revision)` is preserved as ADR
+0022 defined it, and an `origin` marker keeps a future producer-issued manifest
+from colliding with consumer-assigned numbers. It is the one rule the producer
+side did not specify, so it is the one most worth a second look before steps
+5–6 freeze a contract around it.
