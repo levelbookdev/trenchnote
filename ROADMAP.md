@@ -72,12 +72,22 @@ in [CLAUDE.md](CLAUDE.md).
   and is **done**: [ADR 0022](docs/adr/0022-equipment-timecard-handoff-contract.md)
   is accepted on the producer side (2026-08-02), with fixtures in
   `docs/contracts/timecard-handoff/`.
-  - Next on the promotion path: the matching accepted decision record in
-    `bindery-trenchnote` (the consumer half of step 4), specified as
+  - **Step 4 is complete on both halves** (2026-08-02). The consumer record —
+    specified here as
     [docs/tasks/030-timecard-handoff-consumer-adr.md](docs/tasks/030-timecard-handoff-consumer-adr.md)
-    — filed `BLOCKED` here because it executes in that repo, not this one.
-    After both halves are accepted: a published versioned contract with
-    compatibility tests (steps 5–6).
+    and executed in the sidecar, which is why it was filed `BLOCKED` here — was
+    accepted as that repo's decision `0009`. Of note for this side: core ships
+    no generator, so the consumer assembles the manifest itself from documented
+    contract reads (which ADR 0022 permits) and therefore assigns its own
+    `revision`, by content hash. Replacement by
+    `(manifest_public_id, revision)` is preserved as ADR 0022 defined it.
+  - **Next: steps 5–6** — a published versioned contract with compatibility
+    tests. Unblocked, not yet broken out as a task. Two things belong to it: the
+    fixtures in `docs/contracts/timecard-handoff/` still carry full timestamps
+    in `arrived_at`/`departed_at` and are due regeneration against `moved_at`,
+    and `ecosystem-contracts.md` suggests publishing contract source separately
+    from private implementation once more than one repo consumes it — a
+    placement decision to make before writing it, not after.
   - **The gate on freezing a version is cleared.** ADR 0022 open issue 3
     (`movements` had no client-set observation date, so an offline move synced
     late landed its segment boundary on the sync day) is resolved by
