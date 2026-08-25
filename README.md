@@ -199,8 +199,9 @@ and operations remain documented in its private repository.
   proposed directions, risks, and the decision backlog.
 - **[docs/BACKLOG.md](docs/BACKLOG.md)** — motivated-but-unbuilt product ideas,
   each with the field incident behind it and the scope wall around it.
-- **[docs/DEPLOY.md](docs/DEPLOY.md)** — running it for real: trailer
-  Pi or VPS, systemd, HTTPS with Caddy, and backups you've actually tested.
+- **[docs/DEPLOY.md](docs/DEPLOY.md)** — running it for real: a trailer
+  Pi, a rented VPS, or your own server; systemd, HTTPS with Caddy, and
+  backups you've actually tested.
 - **[docs/API.md](docs/API.md)** — the public API contract (v1): what
   integrations and third-party tools may build on, and the stability
   promise that comes with it.

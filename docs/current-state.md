@@ -4,7 +4,7 @@
 
 **Repository snapshot:** `main`, a few commits past the `v1.0.0` release
 
-**Reviewed:** 2026-07-21
+**Reviewed:** 2026-07-21 (deployment status re-verified 2026-08-23)
 
 This document records behavior confirmed in this repository. It does not
 describe the broader product family except where an implemented integration
@@ -227,23 +227,58 @@ Repository configuration for that topology lives in `deploy/`; operator
 instructions live in `docs/DEPLOY.md`, `deploy/README.md`, and
 `docs/RUNBOOK.md`.
 
-**CURRENT public deployment, verified 2026-07-20:**
+**CURRENT public deployment, verified 2026-08-23: there is none.**
 
-- `https://trenchnote.com` serves the public project site.
-- `https://app.trenchnote.com/api/health` reports a healthy PocketBase API.
-- The deployed service worker is `v6`, while this repository is `v19`.
-- The deployed database is materially behind `main`: the `inspections`,
+- `https://trenchnote.com` still serves the public project site from GitHub
+  Pages (`docs/` plus `docs/CNAME`). It is a static marketing and
+  documentation site, not the app, and is unaffected by everything below.
+- The VPS that served `https://app.trenchnote.com` was destroyed on
+  2026-08-23. The hostname no longer resolves and no TrenchNote instance is
+  reachable on the internet.
+- **`pb_data/` was not exported before teardown.** The previous production
+  ledger — every movement, reading, inspection, condition report, and
+  reservation, plus the uploaded packing slips and damage photos — is gone.
+  There is no replica, no backup zip, and no restore path. The replacement is
+  a **fresh install from `main`**, seeded by hand, not a restore.
+- The replacement is the single writable instance on the maintainer's own
+  hardware, **keeping the same public hostnames**. That changes the machine,
+  not the topology: ADR 0006 stands, and nothing in `deploy/` is
+  provider-specific. The `app` A record has to be recreated pointing at the
+  new box — and recreated at whichever nameservers hold the zone once the
+  registrar transfer in ROADMAP's domain-verification follow-up settles.
+- The version skew this document tracked until 2026-07-20 — a live service
+  worker at `v6` against a repository at `v19`, with `inspections`,
   `manifests`, `condition_reports`, `container_events`, and `kit_audits`
-  collections all return `404` live, so the receiving evidence, inspections,
-  transfer-manifest, condition-report, and Gang Box features are not yet
-  reachable in production. `deploy/UPDATE.md` records that the live box is
-  behind `main`. Bringing production to the `v1.0.0` release is a tracked
-  post-tag task, not a repository defect.
+  returning `404` in production — is closed by deletion rather than by the
+  planned catch-up. Those features never ran in production and the box they
+  would have run on no longer exists. A fresh install applies every migration
+  on first boot, so the replacement ships the whole `v1.0.0` surface from its
+  first request.
 
 **UNKNOWN:** the repository cannot confirm whether the optional Pi replica,
-offsite backup destination, SMTP delivery, or restore drill is currently
-operational. Runbooks describe how they should work, not proof that a specific
-deployment completed them.
+offsite backup destination, SMTP delivery, or restore drill was ever
+operational on the destroyed VPS. Runbooks describe how these should work;
+they are not proof that a specific deployment completed them. The data loss
+above is what that gap looks like when the box goes away — the first
+deployment task on the replacement is a backup destination and a rehearsed
+restore, before crews put anything in it worth losing.
+
+**Printed labels survive, on one condition.** Because the hostname is
+unchanged, every laminated QR still points at a valid URL — no reprint. But a
+label encodes `asset.html?code={tag_code}`, and `asset.html` resolves that by
+querying `assets` for a matching `tag_code`; an unmatched code renders "No
+asset found with tag …". So the labels in the field only work again if the
+re-seeded `assets` collection **reuses the exact `tag_code` values already
+printed**. Re-seeding with fresh codes silently invalidates every label
+without changing a single URL.
+
+Recovering those codes is easier than it sounds, because of the convention
+adopted in the ADR 0010 addendum: for the equipment that carries one, the tag
+code *is* the stenciled fleet number (`P-138`, `FL-16`), which is still
+painted on the machine whatever happened to the database. Codes are
+uppercase-canonical and matched case-insensitively, so transcription case is
+not a hazard here; invented `A001`-style codes for untagged small tools are
+the ones that exist only on the label and in the lost ledger.
 
 ## Current tests and verification
 
@@ -268,8 +303,11 @@ PocketBase, and verify queued writes after restart.
 
 ## Known limitations and active instability
 
-- **CURRENT:** repository `main` and the public deployment are not at the same
-  version.
+- **CURRENT:** there is no public deployment. The instance crews scanned
+  against was destroyed on 2026-08-23, taking its `pb_data/` with it, and its
+  replacement has not been stood up. Nothing in this document about field
+  behavior is currently being exercised by real users, and no historical
+  ledger exists to migrate forward.
 - **CURRENT:** `scripts/smoke_test.sh` guards the migrations, the API access
   rules, and the derived calculations, but offline replay, internal
   documentation links, and browser flows still have no automated gate and are

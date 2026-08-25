@@ -3,7 +3,7 @@
 **Authority:** Descriptive for current/decided topics; proposed for unresolved
 direction
 
-**Reviewed:** 2026-07-12
+**Reviewed:** 2026-07-12 (deployment row re-verified 2026-08-23)
 
 This table prevents architectural intent from being mistaken for shipped
 behavior. “Risk if changed now” describes the compatibility or field risk, not
@@ -28,15 +28,17 @@ an argument that every current detail must remain forever.
 | Separate bounded contexts | **CURRENT as separate repos / PROPOSED as family rule** | Products are separate repositories/databases with overlapping concepts | Keep separate authorities; integrate through versioned contracts | High if centralized prematurely | Accept a family ADR before first production integration |
 | Paid/core boundary | **CURRENT / DECIDED for TrenchNote** | AGPL core is standalone; private sidecar uses ordinary REST access | Field execution, retention, backup, and basic export stay public; paid side remains optional | High: trust, licensing boundary, and self-hostability | Apply equivalent explicit boundary decisions in each sibling product |
 | Service-cutover ownership | **CURRENT overlap / PROPOSED migration** | Implemented in LoopCheck; LineCheck is pre-alpha | LineCheck should eventually own linear service cutover and restoration | High if moved before LineCheck persistence/export maturity | Scope, migration mapping, compatibility window, and owner approval |
-| Deployment topology | **DECIDED; deployment partially current** | One live VPS; repository configs support Caddy and optional Pi replica; live app is behind `main` | One writable instance, tested backup/restore, optional replica/staging | High: data loss, printed URLs, and downtime | Confirm actual replica/restore status and update the live instance safely |
+| Deployment topology | **DECIDED; NOT CURRENTLY DEPLOYED; prior ledger lost** | No live instance: the VPS serving `app.trenchnote.com` was destroyed 2026-08-23 without exporting `pb_data/`; repository configs support Caddy and optional Pi replica and are provider-neutral | Fresh install from `main` on the maintainer's own hardware at the same hostnames, with a backup destination and rehearsed restore before first field use | Realized: the production ledger and uploaded evidence are gone; printed labels remain valid only if re-seeded `tag_code` values match | Which machine becomes the new primary; how `tag_code` values are re-seeded to match printed labels; which backup destination is configured on day one |
 | Authentication | **CURRENT / DECIDED** | PocketBase users, shared field accounts, personal manager accounts, no public signup | Keep local auth until concrete cross-product requirements justify change | High: offline behavior and field friction | Service-account least privilege and future federation only when an integration exists |
 | Units | **CURRENT partial / PROPOSED** | Reading type is explicit; bulk quantity has no unit field | Handoff values should carry explicit unit and semantic quantity basis | Medium before cross-product quantity exchange | Whether unit belongs on item, movement, or handoff only; migration for existing quantities |
 | Import provenance | **NOT IMPLEMENTED / PROPOSED** | No import jobs or source-reference records | Preserve source, version, IDs, times, and idempotency for every cross-product import | Low now, high before imports | Storage shape, retention, re-import behavior, and operator-visible errors |
 
 ## Stabilization priorities
 
-1. Keep the current collection semantics and API v1 stable while the public
-   deployment catches up to `main`.
+1. Re-establish a production instance from `main` on self-hosted hardware as a
+   fresh install (no prior ledger survives), re-seeding assets with the
+   `tag_code` values already printed on field labels, and configuring an
+   off-box backup destination and a rehearsed restore before crews use it.
 2. Add repeatable migration/API/offline verification before broad schema work.
 3. Decide public/project identity before the first cross-product handoff.
 4. Select one narrow handoff and validate it end to end before accepting a

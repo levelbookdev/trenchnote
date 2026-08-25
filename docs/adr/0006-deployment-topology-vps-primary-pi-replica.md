@@ -43,3 +43,42 @@ project, and TrenchNote's ethos (and the non-goals list) says no.
 - If a standalone offline-site instance ever needs its history folded
   into the main ledger, that's a deliberate one-time import job (the
   movements collection is append-only CSV-shaped data), not sync.
+
+## Amendment — 2026-08-23: the primary moves to self-hosted hardware
+
+The rented VPS that served `app.trenchnote.com` was destroyed, and its
+`pb_data/` was not exported first. The primary is being rebuilt on the
+maintainer's own server, at the same hostname, as a fresh install.
+
+**The decision above is unchanged**, and this is not a new ADR, because
+nothing here was ever about renting the machine. Read "VPS" throughout this
+record as *the single writable instance, wherever it runs*: one URL, one
+ledger, no peers, Caddy in front, PocketBase on localhost. Owning the hardware
+changes the invoice and the physical location, not the topology — which is why
+nothing in `deploy/` needed editing when the provider went away.
+
+Three things did change — the first of them a correction to this record
+rather than a consequence of the move:
+
+- **The "losing the VPS" path in the Consequences section above was wrong,
+  and this is how we found out.** It says losing the VPS means "restoring to a
+  new box from the Pi's replica — minutes of work." That sentence assumed a
+  replica that was never built: Phase 6 of the runbook was always "later," and
+  the ADR's own safety net was optional. The box went away and took the ledger
+  with it. **One writable instance is a correct topology only when the copy
+  that makes it survivable actually exists** — the decision here should be
+  read as *one writable instance plus a working off-box copy*, with the second
+  half no more optional than the first.
+- **Self-hosted hardware moves availability onto the maintainer's own
+  uplink, power, and IP.** A residential connection and a dynamic address are
+  real constraints for crews scanning over cell data from twelve sites; a
+  reverse tunnel or a static address is part of the deployment, not an
+  afterthought.
+- **The hostname is deliberately unchanged, which saves the printed labels —
+  but only halfway.** QR labels bake in a base URL (ADR 0010), so reusing
+  `app.trenchnote.com` means no reprint. The URL still carries a `tag_code`
+  the rebuilt database has to recognize, so re-seeding `assets` must reuse the
+  codes already laminated and hanging on the gear — for anything with a
+  stenciled fleet number that code is still painted on the machine (ADR 0010
+  addendum). Same URL, new codes, is the quiet failure mode: every label
+  resolves and every scan says "No asset found with tag …".

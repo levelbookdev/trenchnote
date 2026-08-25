@@ -148,6 +148,11 @@ things to script.
 5. Seed real `locations`, `items`, `assets`, then print labels from
    `https://DOMAIN/labels.html` **with the Base URL set to `https://DOMAIN`**
    (the QR codes bake in this address — get it right before laminating).
+   *Rebuilding an instance whose labels are already in the field?* Keep the
+   same **DOMAIN** and seed each asset with the `tag_code` printed on its
+   existing label — same hostname plus new codes means every scan lands on
+   "No asset found with tag …". See
+   [DEPLOY.md → moving between boxes](../docs/DEPLOY.md#moving-between-boxes-later-lan-to-internet-or-provider-to-your-own).
 
 Want realistic demo data to click through first? On the box:
 `TN_EMAIL=<a user> TN_PASSWORD=... sh scripts/seed_demo.sh` (see
@@ -192,7 +197,7 @@ pull → restart → verify checklist. The short version:
 cd /opt/trenchnote/app
 sudo -u trenchnote git pull
 sudo systemctl restart trenchnote          # pending migrations auto-apply
-sh deploy/verify-live.sh https://app.trenchnote.com   # from your laptop's checkout
+sh deploy/verify-live.sh https://DOMAIN   # from your laptop's checkout
 ```
 
 **Back up first** (Admin UI → Settings → Backups) — a migration runs against the

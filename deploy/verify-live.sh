@@ -8,7 +8,7 @@
 #
 # Usage — run it from a checkout of the version you EXPECT to be live, so it
 # can compare the deployed service-worker VERSION against this repo's:
-#   sh deploy/verify-live.sh https://app.trenchnote.com
+#   sh deploy/verify-live.sh https://DOMAIN     # the hostname you deployed
 #
 # Exit 0 = up and current. Non-zero = something is behind (it says what).
 

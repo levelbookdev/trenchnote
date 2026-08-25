@@ -105,10 +105,15 @@ locations/items/assets, then print labels from
 **Phones must be on the same network** (the site Wi-Fi or an office AP that
 reaches the yard). If crews are on cell data only, you need Option B.
 
-## Option B — internet-facing VPS
+## Option B — an internet-facing box (rented VPS or your own hardware)
 
 For crews scanning over cell data from twelve different sites, TrenchNote
 needs a real domain and HTTPS.
+
+The box can be rented or yours. Everything in this section — the systemd
+unit, Caddy, the firewall, the backups — is identical either way, and
+nothing in [`deploy/`](../deploy/) is provider-specific. "VPS" below just
+means *the machine running the single writable instance*.
 
 > **In a hurry? Use the runbook.** [`deploy/`](../deploy/) has an ordered,
 > copy-paste VPS checklist ([deploy/README.md](../deploy/README.md)) plus
@@ -138,12 +143,50 @@ Point your domain's DNS at the VPS, `sudo systemctl reload caddy`, and
 TrenchNote is at `https://trenchnote.example.com`. Reprint the labels with
 that as the Base URL.
 
-### Moving from LAN to VPS later
+### If that box is your own hardware
+
+Same install, three extra things a rented VPS gave you for free. None is
+hard; all three are load-bearing, because crews on cell data can only reach
+what your uplink publishes.
+
+1. **A stable public address.** Caddy can only get a certificate for a name
+   that resolves to this box. Either a static IP from your ISP, or dynamic
+   DNS, or — often the least trouble at home — a tunnel (Cloudflare Tunnel,
+   or Tailscale Funnel) so nothing is port-forwarded at all. If you tunnel,
+   TLS terminates at the tunnel and Caddy's auto-HTTPS may be redundant;
+   don't run both halves of the same job.
+2. **Ports 80 and 443 actually reaching the box** if you are not tunneling:
+   forwarded at the router, and not blocked by the ISP (residential plans
+   commonly block 80 — which also blocks Caddy's HTTP-01 certificate
+   challenge; the DNS-01 challenge is the way around it).
+3. **Power and uplink are now yours.** The failure modes a datacenter
+   absorbed — a power cut, a modem reboot, an upstream outage — are now
+   visible to every phone in the field. A UPS and the Phase 6 replica stop
+   being optional polish at the point where the yard depends on this.
+
+Weigh those against what you get back: no monthly bill, the ledger sits on
+hardware you physically control, and nobody can delete the machine but you.
+
+### Moving between boxes later (LAN to internet, or provider to your own)
 
 Copy `pb_data/` from the old box to the new one (stop the service first,
-see Backups below). Then reprint every label — the old QRs encode the LAN
-IP, which phones on cell data can't reach. This is why you don't laminate
-200 labels before choosing where TrenchNote lives.
+see Backups below) — that directory *is* the ledger plus every uploaded
+packing slip and damage photo, so copy it before you decommission anything.
+Then reprint every label whose URL changed: the old QRs encode the old
+address, and a LAN IP is unreachable from cell data. Keeping the same public
+hostname across a move is the one way to avoid the reprint entirely. This is
+why you don't laminate 200 labels before choosing where TrenchNote lives.
+
+**If the old `pb_data/` is gone** — destroyed box, no backup — you are doing a
+fresh install, and the labels already hanging on the gear are the constraint.
+They encode `asset.html?code={tag_code}`, so reusing the same hostname keeps
+them resolving, but only the same **tag codes** make them find anything: seed
+`assets` with the codes printed on the labels, exactly. Gear with a stenciled
+fleet number carries its own code (ADR 0010 addendum), so most of the catalog
+can be rebuilt by walking the yard and reading the paint. A fresh install with
+new codes fails quietly — the page loads and says *No asset found with tag …*
+for every scan. Rebuild the catalog before the crews come back, then walk the
+yard with [`scan.html`](../pb_public/scan.html) to put things back on the map.
 
 ## Off-site move alerts (email setup)
 

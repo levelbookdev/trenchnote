@@ -79,7 +79,7 @@ authority. At the reviewed snapshot every committed ADR below is accepted.
 | [0003](adr/0003-boring-ops-no-containers.md) | systemd/Caddy operations without containers |
 | [0004](adr/0004-auth-shared-field-account.md) | Auth-required access with shared field accounts; amended by ADR 0008 |
 | [0005](adr/0005-consumption-movements-without-destination.md) | Bulk consumption as a from-only movement |
-| [0006](adr/0006-deployment-topology-vps-primary-pi-replica.md) | One writable VPS and optional Pi replica/staging target |
+| [0006](adr/0006-deployment-topology-vps-primary-pi-replica.md) | One writable instance (rented or self-hosted) and optional Pi replica/staging target |
 | [0007](adr/0007-reservation-lifecycle-stored-status.md) | Human-managed stored reservation lifecycle |
 | [0008](adr/0008-offline-first-pwa.md) | Stamped caches, idempotent queue, and arrival-order truth |
 | [0009](adr/0009-in-app-scanner-lazy-fallback.md) | Native scanner first and lazy local decoder fallback |
