@@ -221,7 +221,12 @@ database guarantee.
 bound to localhost and exposed through Caddy HTTPS. An optional trailer/office
 Pi receives Litestream replication of SQLite plus a separate file copy of
 uploaded storage. The Pi is a replica and staging target, never a writable peer.
-LAN-only and fully standalone installations are also supported.
+LAN-only, private-mesh, and fully standalone installations are also
+supported. The private-mesh shape (`docs/DEPLOY.md` Option C) keeps the
+localhost binding and terminates TLS at `tailscale serve` rather than Caddy,
+which preserves the secure context `pb_public/sw.js` requires; it is
+documented as a staging and small-team shape, not a crew-facing one, because
+it requires a mesh client on every device.
 
 Repository configuration for that topology lives in `deploy/`; operator
 instructions live in `docs/DEPLOY.md`, `deploy/README.md`, and

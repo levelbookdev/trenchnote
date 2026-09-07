@@ -47,7 +47,7 @@ its context. A proposed ADR is proposed only.
 
 | Document | Authority | Purpose |
 | --- | --- | --- |
-| [`docs/DEPLOY.md`](DEPLOY.md) | Normative operations guide | LAN/VPS deployment, SMTP, backup, replica, and restore procedures |
+| [`docs/DEPLOY.md`](DEPLOY.md) | Normative operations guide | LAN, VPS, and private-mesh deployment, SMTP, backup, replica, and restore procedures |
 | [`deploy/README.md`](../deploy/README.md) | Normative operations guide | Ordered VPS installation checklist using committed configuration templates |
 | [`deploy/UPDATE.md`](../deploy/UPDATE.md) | Normative operations guide | Backup, update, verification, and rollback sequence for a live instance |
 | [`docs/RUNBOOK.md`](RUNBOOK.md) | Normative operations guide | Restarts, logs, restore, credential rotation, and PocketBase upgrades |

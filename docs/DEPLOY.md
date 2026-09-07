@@ -5,7 +5,7 @@ a dead SD card can't erase eighteen months of ledger history.
 
 > **Auth status:** as of migration `1783468806`, every API rule requires a
 > signed-in user and there is no public self-registration (see ADR 0004).
-> Both options below are safe. For anything internet-facing, use Option B's
+> All three options below are safe. For anything internet-facing, use Option B's
 > HTTPS setup — never expose the bare HTTP port to the world — and use
 > strong passwords on the admin and user accounts.
 
@@ -103,7 +103,10 @@ locations/items/assets, then print labels from
 `http://192.168.1.50:8090`.
 
 **Phones must be on the same network** (the site Wi-Fi or an office AP that
-reaches the yard). If crews are on cell data only, you need Option B.
+reaches the yard). If crews are on cell data only, you need Option B. Note
+also that a plain-HTTP LAN address is not a secure context, so the offline
+layer (ADR 0008) does not register here — see Option C for why that matters
+and how a mesh avoids it.
 
 ## Option B — an internet-facing box (rented VPS or your own hardware)
 
@@ -187,6 +190,91 @@ can be rebuilt by walking the yard and reading the paint. A fresh install with
 new codes fails quietly — the page loads and says *No asset found with tag …*
 for every scan. Rebuild the catalog before the crews come back, then walk the
 yard with [`scan.html`](../pb_public/scan.html) to put things back on the map.
+
+## Option C — a private mesh (Tailscale), no domain, no port forwarding
+
+Between A and B there is a third shape: the box stays unreachable from the
+public internet, but authorised devices reach it from **anywhere** — a yard,
+a hotel, a home office — over a private WireGuard mesh. No DNS record, no
+router configuration, no certificate challenge, and TLS that browsers
+actually trust.
+
+This is the right choice for **standing an instance up**: rebuilding a
+catalog, rehearsing a restore, or piloting with two or three people, before
+you commit to a public hostname. It is **not** the crew-facing answer — read
+the limits at the end of this section before planning a rollout around it.
+
+### Why not just bind to the mesh address
+
+The obvious move is to point the unit at the mesh interface and browse to
+`http://100.x.y.z:8090`. Don't. **Plain HTTP is not a secure context, and
+browsers refuse to register a service worker outside one.** TrenchNote's
+whole offline layer — the cached app shell, the IndexedDB write queue, the
+staleness banner (ADR 0008) — *is* `pb_public/sw.js`, so over plain HTTP it
+silently does not exist. The app then looks perfectly healthy on a desk with
+good wifi and fails in exactly the dirt-lot conditions it was built for.
+
+`localhost` is the one exception browsers make, which is why this never
+shows up while developing. Option A accepts it knowingly: a LAN box with no
+certificate has the same limitation, and the tradeoff is that crews need no
+mesh account. Option C can do better for free, so it should.
+
+So the mesh has to terminate TLS. Tailscale does that for you.
+
+### The setup
+
+PocketBase keeps the **unmodified** localhost binding from Option B —
+`deploy/trenchnote.service` needs no edit at all:
+
+```sh
+ExecStart=/opt/trenchnote/app/pocketbase serve --http=127.0.0.1:8090
+```
+
+Then enable **HTTPS Certificates** for the tailnet once, in the Tailscale
+admin console, and on the box:
+
+```sh
+tailscale serve --bg 8090      # publish localhost:8090 over the tailnet, with TLS
+tailscale serve status         # confirm the https:// URL it chose
+```
+
+TrenchNote is now at `https://<host>.<tailnet>.ts.net` with a real
+certificate, reachable by every device signed in to your tailnet and by
+nothing else. Verify it the same way as any other deployment:
+
+```sh
+sh deploy/verify-live.sh https://<host>.<tailnet>.ts.net
+```
+
+**Do not also run Caddy.** `tailscale serve` is the front door here; Caddy
+would be a second attempt at the same job, and its HTTP-01 challenge cannot
+succeed on a name that resolves only inside the mesh. Option B's Caddy setup
+and this are alternatives, never layers.
+
+**Running in a container?** Tailscale needs `/dev/net/tun`. An unprivileged
+LXC does not get it by default — pass it through from the host, or
+`tailscale up` fails with a TUN device error before any of the above
+matters.
+
+**Firewall:** nothing to open. Port 8090 stays on localhost and the mesh
+carries the traffic, so the `ufw allow 80,443` lines from the hardening
+section have no equivalent here.
+
+### The limits — read before planning a rollout
+
+- **Every device needs Tailscale installed and signed in.** That is an
+  app-store download and an account per phone, which is precisely what
+  TrenchNote's ethos rules out for crews: a check-in is supposed to be a
+  native camera scan into a browser and nothing else. Fine for you and a
+  couple of PMs; wrong for twenty laborers on company iPads.
+- **QR labels bake in whatever base URL you print.** A `.ts.net` address on
+  a laminated label is unreadable to any phone outside the mesh, so **do not
+  print production labels from an Option C instance.** Print them once you
+  are on the public hostname (see *Moving between boxes later*).
+- **It is not a public deployment.** When crews need it, move to Option B.
+  That move is a hostname change, not a reinstall: same `pb_data/`, same
+  unit — add DNS and Caddy, or keep the mesh and put Tailscale Funnel in
+  front, which publishes the same instance without a port forward.
 
 ## Off-site move alerts (email setup)
 
@@ -413,3 +501,4 @@ PocketBase upgrades — live in [RUNBOOK.md](RUNBOOK.md).
 | Update app | `git pull` then restart |
 | Backup now | Admin UI → Settings → Backups → Create |
 | Restore | Admin UI → Settings → Backups → ⟲ on the zip |
+| Mesh URL (Option C) | `tailscale serve status` |
