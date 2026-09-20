@@ -123,3 +123,8 @@ in [CLAUDE.md](CLAUDE.md).
     untouched.
   - **Then verify:** org → Settings → Pages → Add a domain → add the challenge
     TXT record (`_github-pages-challenge-levelbookdev`) at Porkbun → Verify domain.
+  - Broken out as [`docs/tasks/060-domain-transfer-dns-continuity.md`](docs/tasks/060-domain-transfer-dns-continuity.md)
+    on 2026-09-08, with the zone inventory verified that day. It is filed
+    `BLOCKED` on the transfer itself, not on any work here — and note the `www`
+    CNAME described as "optional" above is in fact live and must be recreated
+    with the apex records.
