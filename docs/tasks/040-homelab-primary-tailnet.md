@@ -1,6 +1,6 @@
 # 040 — Bring the homelab instance to `main`, on the shared image, over tailnet HTTPS
 
-Status: BLOCKED (executes on heidilab, after homelab DECISIONS §54 is committed and its image built there; not from this repo)
+Status: IN PROGRESS (steps 1–7 done on heidilab 2026-10-10; waits on the maintainer for step 8 and the on-device service-worker check)
 
 ## Context
 
@@ -110,25 +110,50 @@ gear, which for fleet equipment is the stenciled number (ADR 0010 addendum).
 
 ## Acceptance criteria
 
-- [ ] `docker compose ps` shows the `trenchnote` container **healthy** on
+- [x] `docker compose ps` shows the `trenchnote` container **healthy** on
       `homelab/pocketbase:0.39.6`; `docker compose config` shows no
       `command:` and a `pb_hooks` mount.
-- [ ] `_migrations` lists all 25 TrenchNote migrations, the newest
+- [x] `_migrations` lists all 25 TrenchNote migrations, the newest
       `1783468826_movement_moved_at.js`.
-- [ ] `tailscale serve status` maps `https://heidilab.tail059fc0.ts.net:<port>`
+- [x] `tailscale serve status` maps `https://heidilab.tail059fc0.ts.net:<port>`
       to `http://100.75.94.35:8101`, and that port is claimed in homelab
       `docs/APPS.md`.
-- [ ] `sh deploy/verify-live.sh https://heidilab.tail059fc0.ts.net:<port>`
+- [x] `sh deploy/verify-live.sh https://heidilab.tail059fc0.ts.net:<port>`
       prints `LIVE VERIFY PASS`, run from a checkout of the deployed commit so
       the `sw.js` VERSION comparison is meaningful.
 - [ ] **The service worker registers.** On a real device over the `https://`
       URL, DevTools → Application → Service Workers shows `sw.js` *activated
       and running*. Without it the deployment is not done.
-- [ ] The test data is either archived at `data.droplet-20260805/` or
+- [x] The test data is either archived at `data.droplet-20260805/` or
       deliberately kept, and `docs/current-state.md` says which.
-- [ ] No demo data, no labels printed from this instance.
-- [ ] `docs/current-state.md` and `docs/architecture-status.md` reconciled:
+- [x] No demo data, no labels printed from this instance.
+- [x] `docs/current-state.md` and `docs/architecture-status.md` reconciled:
       code level, hooks, the HTTPS URL, and the date verified.
+
+## Progress — 2026-10-10
+
+Steps 1–7 done on heidilab, with the maintainer's go-ahead. The 2026-10-10
+restic snapshot held `/srv/apps/trenchnote/data` before anything changed. The
+test data is archived at `data.droplet-20260805/`, the old compose file at
+`docker-compose.yml.bak-20261010`, and `app/`'s remote now points at
+`levelbookdev/trenchnote` (it pointed at the pre-transfer
+`mds08011/trenchnote`). The container is healthy on `homelab/pocketbase:0.39.6`
+with all 25 migrations and both hooks. HTTPS is
+`https://heidilab.tail059fc0.ts.net:9101` — host port + 1000, the convention
+now in homelab `docs/APPS.md` — and `verify-live.sh` passed from the deployed
+checkout with `sw.js` `v21` matching.
+
+**Left for the maintainer:**
+
+- **Step 8, first-run config.** Create the superuser, either at
+  `https://heidilab.tail059fc0.ts.net:9101/_/` (the install link is in
+  `docker logs trenchnote`) or with
+  `docker exec trenchnote pocketbase superuser upsert EMAIL PASS --dir=/pb_data`.
+  Then set Application URL to `https://heidilab.tail059fc0.ts.net:9101` and
+  create the field and PM accounts.
+- **The service-worker check** on a real device over the HTTPS URL.
+
+Then tick the remaining boxes and set `Status:` to `DONE`.
 
 ## Guardrails
 

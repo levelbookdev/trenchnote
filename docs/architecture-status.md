@@ -28,17 +28,17 @@ an argument that every current detail must remain forever.
 | Separate bounded contexts | **CURRENT as separate repos / PROPOSED as family rule** | Products are separate repositories/databases with overlapping concepts | Keep separate authorities; integrate through versioned contracts | High if centralized prematurely | Accept a family ADR before first production integration |
 | Paid/core boundary | **CURRENT / DECIDED for TrenchNote** | AGPL core is standalone; private sidecar uses ordinary REST access | Field execution, retention, backup, and basic export stay public; paid side remains optional | High: trust, licensing boundary, and self-hostability | Apply equivalent explicit boundary decisions in each sibling product |
 | Service-cutover ownership | **CURRENT overlap / PROPOSED migration** | Implemented in LoopCheck; LineCheck is pre-alpha | LineCheck should eventually own linear service cutover and restoration | High if moved before LineCheck persistence/export maturity | Scope, migration mapping, compatibility window, and owner approval |
-| Deployment topology | **DECIDED; DEPLOYED tailnet-only on stale code** | One instance on the maintainer's homelab server (heidilab), a Docker Compose stack defined in the homelab repo, tailnet-only over plain HTTP; holds the droplet's `pb_data/`, copied 2026-08-05 — test data only, nothing lost. Code is the 2026-07-10 checkout (17 of 25 migrations, no `pb_hooks`). Repository configs (`deploy/`) support Caddy and an optional Pi replica and remain the self-hoster path | Bring that instance to `main`, mount `pb_hooks`, serve it over HTTPS on the tailnet (task 040), rehearse a restore (task 050), then seed real gear | Medium: no field use yet; the offline layer is absent until HTTPS, and restic → B2 covers `data/` but no restore has been rehearsed | Which HTTPS port `tailscale serve` gives it on heidilab; when it goes public, and at what hostname |
+| Deployment topology | **DECIDED; DEPLOYED tailnet-only, empty** | One instance on the maintainer's homelab server (heidilab): a Docker Compose stack defined in the homelab repo, on `main` with hooks, at `https://heidilab.tail059fc0.ts.net:9101` via `tailscale serve`; ledger empty (the droplet's test data archived, nothing lost). Repository configs (`deploy/`) support Caddy and an optional Pi replica and remain the self-hoster path | Finish first-run config and confirm the service worker on a device (task 040), rehearse a restore (task 050), then seed real gear | Medium: no field use yet; restic → B2 covers `data/` but no restore has been rehearsed | When it goes public, and at what hostname |
 | Authentication | **CURRENT / DECIDED** | PocketBase users, shared field accounts, personal manager accounts, no public signup | Keep local auth until concrete cross-product requirements justify change | High: offline behavior and field friction | Service-account least privilege and future federation only when an integration exists |
 | Units | **CURRENT partial / PROPOSED** | Reading type is explicit; bulk quantity has no unit field | Handoff values should carry explicit unit and semantic quantity basis | Medium before cross-product quantity exchange | Whether unit belongs on item, movement, or handoff only; migration for existing quantities |
 | Import provenance | **NOT IMPLEMENTED / PROPOSED** | No import jobs or source-reference records | Preserve source, version, IDs, times, and idempotency for every cross-product import | Low now, high before imports | Storage shape, retention, re-import behavior, and operator-visible errors |
 
 ## Stabilization priorities
 
-1. Bring the homelab instance up to `main` with its hooks mounted and HTTPS on
-   the tailnet (task 040), rehearse a restore from its off-box backup (task
-   050), and only then seed real gear, using the `tag_code` values already
-   printed on field labels.
+1. Finish the homelab instance's first-run config and confirm its service
+   worker on a real device (task 040), rehearse a restore from its off-box
+   backup (task 050), and only then seed real gear, using the `tag_code`
+   values already printed on field labels.
 2. Add repeatable migration/API/offline verification before broad schema work.
 3. Decide public/project identity before the first cross-product handoff.
 4. Select one narrow handoff and validate it end to end before accepting a

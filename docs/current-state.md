@@ -233,46 +233,45 @@ instructions live in `docs/DEPLOY.md`, `deploy/README.md`, and
 `docs/RUNBOOK.md`.
 
 **CURRENT deployment, verified 2026-10-10: one tailnet-only instance on the
-maintainer's homelab, running pre-`v1.0.0` code. There is no public
-deployment.**
+maintainer's homelab, on `main`, over HTTPS, with an empty ledger. There is no
+public deployment.**
 
 - `https://trenchnote.com` still serves the public project site from GitHub
   Pages (`docs/` plus `docs/CNAME`). It is a static marketing and
   documentation site, not the app.
-- `app.trenchnote.com` no longer resolves. The DigitalOcean droplet behind it
-  (`trenchnote-db1`) was retired the way the homelab repo records it
-  (`DECISIONS.md` §25 there): its `pb_data/` was copied to the homelab server
-  `heidilab` on 2026-08-05, and the droplet was destroyed on 2026-08-23 with
-  the data held live on heidilab and in two restic snapshots in Backblaze B2.
-- **No ledger was lost.** From 2026-08-23 until 2026-10-10 this document said
-  the droplet was destroyed without an export, taking the production ledger and
-  every uploaded file with it. That was wrong: the session that wrote it could
-  not see the homelab repo. The copy on heidilab is the droplet's complete
-  `pb_data/`.
-- **What that ledger holds is test data**, all entered on 2026-07-10: one user,
-  two locations, two items, two assets (`A001`, `A002`), one movement, one
-  reservation, and no uploaded files (`pb_data/storage/` does not exist). No
-  field data has been entered into any TrenchNote deployment.
-- **How it runs:** a Docker Compose stack at `/srv/apps/trenchnote` on
-  heidilab, defined by the homelab repo (`docs/APPS.md`, `DECISIONS.md` §23
-  and §54 there) rather than by this repo's `deploy/` runbook. ADR 0003 is
-  unaffected — this repo still ships no container files — and ADR 0006's
-  second amendment records why. It binds heidilab's tailnet address on port
-  8101 and is reachable only over the Tailscale mesh.
+- **The instance:** `https://heidilab.tail059fc0.ts.net:9101`, reachable only
+  over the Tailscale mesh. It is a Docker Compose stack at
+  `/srv/apps/trenchnote` on the homelab server `heidilab`, defined by the
+  homelab repo (`docs/APPS.md`, `DECISIONS.md` §23 and §54 there) rather than
+  by this repo's `deploy/` runbook, on the homelab's own `homelab/pocketbase`
+  image (PocketBase 0.39.6, official release). ADR 0003 is unaffected — this
+  repo still ships no container files — and ADR 0006's second amendment
+  records why. TLS is terminated by `tailscale serve` (the `docs/DEPLOY.md`
+  Option C shape), which proxies to the container on heidilab's tailnet
+  address, port 8101.
+- **What runs there** (task 040, 2026-10-10): code at `main`, all 25
+  migrations applied, `pb_hooks/` mounted (off-site move email, gang-box
+  invariants), and the `Missing in transfer` holding location seeded.
+  `deploy/verify-live.sh` passes against the HTTPS URL with the live `sw.js`
+  matching the deployed checkout. Not yet confirmed: the superuser and
+  accounts (first-run config), and the service worker registering on a real
+  device — task 040 stays open until both are done.
+- **The ledger is empty, by choice.** `app.trenchnote.com` no longer resolves.
+  The droplet behind it (`trenchnote-db1`) was retired by the homelab repo
+  (its `DECISIONS.md` §25): its `pb_data/` was copied to heidilab on
+  2026-08-05 and the droplet destroyed on 2026-08-23. **No ledger was lost** —
+  from 2026-08-23 until 2026-10-10 this document said otherwise, written by a
+  session that could not see the homelab repo. That copy is test data from
+  2026-07-10 (one user, two locations, two items, assets `A001` and `A002`,
+  one movement, one reservation, no uploaded files). Rather than carry test
+  rows into an append-only ledger, it was archived beside the stack as
+  `data.droplet-20260805/` and the instance started empty. No field data has
+  been entered into any TrenchNote deployment.
 - **Backups:** `/srv/apps` is backed up nightly by the homelab's restic job to
-  B2, and PocketBase writes its own nightly backup zip into `pb_data/backups/`.
-  No restore of this instance has been rehearsed (task 050).
-- **It is not current, and not yet a working PWA** (task 040):
-  - its code is a 2026-07-10 checkout at migration `1783468808` — 17 of the
-    repository's 25 — so readings, inspections, condition reports, transfer
-    manifests, gang boxes and `moved_at` do not exist there;
-  - `pb_hooks/` is not mounted, so the off-site move email and the gang-box
-    invariants are not enforced;
-  - it is served over plain HTTP, which is not a secure context, so `sw.js`
-    never registers and ADR 0008's offline layer is absent;
-  - it runs the community image `ghcr.io/muchobien/pocketbase:0.39.6`, which
-    the homelab is replacing with its own `homelab/pocketbase` image built from
-    the official release.
+  Backblaze B2 (the 2026-10-10 snapshot holds `trenchnote/data`), and
+  PocketBase writes its own nightly backup zip into `pb_data/backups/`. No
+  restore of this instance has been rehearsed (task 050), so no real data goes
+  in yet.
 
 **Printed labels.** Any label printed against the droplet encodes
 `app.trenchnote.com`, which no longer resolves; such a label works again only
@@ -307,9 +306,8 @@ PocketBase, and verify queued writes after restart.
 ## Known limitations and active instability
 
 - **CURRENT:** there is no public deployment. The only instance is the
-  tailnet-only one on heidilab, running 2026-07-10 code against test data, over
-  plain HTTP. Nothing in this document about field behavior is currently being
-  exercised by real users.
+  tailnet-only one on heidilab, on `main` with an empty ledger. Nothing in this
+  document about field behavior is currently being exercised by real users.
 - **CURRENT:** `scripts/smoke_test.sh` guards the migrations, the API access
   rules, and the derived calculations, but offline replay, internal
   documentation links, and browser flows still have no automated gate and are
