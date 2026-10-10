@@ -232,58 +232,56 @@ Repository configuration for that topology lives in `deploy/`; operator
 instructions live in `docs/DEPLOY.md`, `deploy/README.md`, and
 `docs/RUNBOOK.md`.
 
-**CURRENT public deployment, verified 2026-08-23: there is none.**
+**CURRENT deployment, verified 2026-10-10: one tailnet-only instance on the
+maintainer's homelab, running pre-`v1.0.0` code. There is no public
+deployment.**
 
 - `https://trenchnote.com` still serves the public project site from GitHub
   Pages (`docs/` plus `docs/CNAME`). It is a static marketing and
-  documentation site, not the app, and is unaffected by everything below.
-- The VPS that served `https://app.trenchnote.com` was destroyed on
-  2026-08-23. The hostname no longer resolves and no TrenchNote instance is
-  reachable on the internet.
-- **`pb_data/` was not exported before teardown.** The previous production
-  ledger — every movement, reading, inspection, condition report, and
-  reservation, plus the uploaded packing slips and damage photos — is gone.
-  There is no replica, no backup zip, and no restore path. The replacement is
-  a **fresh install from `main`**, seeded by hand, not a restore.
-- The replacement is the single writable instance on the maintainer's own
-  hardware, **keeping the same public hostnames**. That changes the machine,
-  not the topology: ADR 0006 stands, and nothing in `deploy/` is
-  provider-specific. The `app` A record has to be recreated pointing at the
-  new box — and recreated at whichever nameservers hold the zone once the
-  registrar transfer in ROADMAP's domain-verification follow-up settles.
-- The version skew this document tracked until 2026-07-20 — a live service
-  worker at `v6` against a repository at `v19`, with `inspections`,
-  `manifests`, `condition_reports`, `container_events`, and `kit_audits`
-  returning `404` in production — is closed by deletion rather than by the
-  planned catch-up. Those features never ran in production and the box they
-  would have run on no longer exists. A fresh install applies every migration
-  on first boot, so the replacement ships the whole `v1.0.0` surface from its
-  first request.
+  documentation site, not the app.
+- `app.trenchnote.com` no longer resolves. The DigitalOcean droplet behind it
+  (`trenchnote-db1`) was retired the way the homelab repo records it
+  (`DECISIONS.md` §25 there): its `pb_data/` was copied to the homelab server
+  `heidilab` on 2026-08-05, and the droplet was destroyed on 2026-08-23 with
+  the data held live on heidilab and in two restic snapshots in Backblaze B2.
+- **No ledger was lost.** From 2026-08-23 until 2026-10-10 this document said
+  the droplet was destroyed without an export, taking the production ledger and
+  every uploaded file with it. That was wrong: the session that wrote it could
+  not see the homelab repo. The copy on heidilab is the droplet's complete
+  `pb_data/`.
+- **What that ledger holds is test data**, all entered on 2026-07-10: one user,
+  two locations, two items, two assets (`A001`, `A002`), one movement, one
+  reservation, and no uploaded files (`pb_data/storage/` does not exist). No
+  field data has been entered into any TrenchNote deployment.
+- **How it runs:** a Docker Compose stack at `/srv/apps/trenchnote` on
+  heidilab, defined by the homelab repo (`docs/APPS.md`, `DECISIONS.md` §23
+  and §54 there) rather than by this repo's `deploy/` runbook. ADR 0003 is
+  unaffected — this repo still ships no container files — and ADR 0006's
+  second amendment records why. It binds heidilab's tailnet address on port
+  8101 and is reachable only over the Tailscale mesh.
+- **Backups:** `/srv/apps` is backed up nightly by the homelab's restic job to
+  B2, and PocketBase writes its own nightly backup zip into `pb_data/backups/`.
+  No restore of this instance has been rehearsed (task 050).
+- **It is not current, and not yet a working PWA** (task 040):
+  - its code is a 2026-07-10 checkout at migration `1783468808` — 17 of the
+    repository's 25 — so readings, inspections, condition reports, transfer
+    manifests, gang boxes and `moved_at` do not exist there;
+  - `pb_hooks/` is not mounted, so the off-site move email and the gang-box
+    invariants are not enforced;
+  - it is served over plain HTTP, which is not a secure context, so `sw.js`
+    never registers and ADR 0008's offline layer is absent;
+  - it runs the community image `ghcr.io/muchobien/pocketbase:0.39.6`, which
+    the homelab is replacing with its own `homelab/pocketbase` image built from
+    the official release.
 
-**UNKNOWN:** the repository cannot confirm whether the optional Pi replica,
-offsite backup destination, SMTP delivery, or restore drill was ever
-operational on the destroyed VPS. Runbooks describe how these should work;
-they are not proof that a specific deployment completed them. The data loss
-above is what that gap looks like when the box goes away — the first
-deployment task on the replacement is a backup destination and a rehearsed
-restore, before crews put anything in it worth losing.
-
-**Printed labels survive, on one condition.** Because the hostname is
-unchanged, every laminated QR still points at a valid URL — no reprint. But a
-label encodes `asset.html?code={tag_code}`, and `asset.html` resolves that by
-querying `assets` for a matching `tag_code`; an unmatched code renders "No
-asset found with tag …". So the labels in the field only work again if the
-re-seeded `assets` collection **reuses the exact `tag_code` values already
-printed**. Re-seeding with fresh codes silently invalidates every label
-without changing a single URL.
-
-Recovering those codes is easier than it sounds, because of the convention
-adopted in the ADR 0010 addendum: for the equipment that carries one, the tag
-code *is* the stenciled fleet number (`P-138`, `FL-16`), which is still
-painted on the machine whatever happened to the database. Codes are
-uppercase-canonical and matched case-insensitively, so transcription case is
-not a hazard here; invented `A001`-style codes for untagged small tools are
-the ones that exist only on the label and in the lost ledger.
+**Printed labels.** Any label printed against the droplet encodes
+`app.trenchnote.com`, which no longer resolves; such a label works again only
+when that hostname points at a live instance *and* that instance's `assets`
+carry the same `tag_code`. The surviving data holds only the two test assets,
+so real gear would be seeded fresh — with the code already on its label, which
+for fleet equipment is the stenciled number (ADR 0010 addendum). Re-seeding
+with new codes fails silently: every scan resolves to "No asset found with
+tag …".
 
 ## Current tests and verification
 
@@ -308,11 +306,10 @@ PocketBase, and verify queued writes after restart.
 
 ## Known limitations and active instability
 
-- **CURRENT:** there is no public deployment. The instance crews scanned
-  against was destroyed on 2026-08-23, taking its `pb_data/` with it, and its
-  replacement has not been stood up. Nothing in this document about field
-  behavior is currently being exercised by real users, and no historical
-  ledger exists to migrate forward.
+- **CURRENT:** there is no public deployment. The only instance is the
+  tailnet-only one on heidilab, running 2026-07-10 code against test data, over
+  plain HTTP. Nothing in this document about field behavior is currently being
+  exercised by real users.
 - **CURRENT:** `scripts/smoke_test.sh` guards the migrations, the API access
   rules, and the derived calculations, but offline replay, internal
   documentation links, and browser flows still have no automated gate and are

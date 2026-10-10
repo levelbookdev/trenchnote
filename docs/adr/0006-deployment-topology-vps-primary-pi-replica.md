@@ -82,3 +82,32 @@ rather than a consequence of the move:
   stenciled fleet number that code is still painted on the machine (ADR 0010
   addendum). Same URL, new codes, is the quiet failure mode: every label
   resolves and every scan says "No asset found with tag …".
+
+## Amendment — 2026-10-10: the ledger was not lost, and the primary runs in Docker
+
+The amendment above was written from inside this repo, which could not see
+the maintainer's homelab repo. Two of its premises were wrong:
+
+- **The droplet's `pb_data/` was exported.** The homelab repo retired the
+  droplet (`trenchnote-db1`) deliberately: its data was copied to the homelab
+  server, heidilab, on 2026-08-05, and the droplet was destroyed on 2026-08-23
+  with that copy live and in two restic snapshots in Backblaze B2 (homelab
+  `DECISIONS.md` §25). What the copy holds is test data from 2026-07-10 — two
+  assets, one movement, no uploaded files. No field ledger existed to lose.
+- **The primary is not a systemd + Caddy install.** It is a Docker Compose
+  stack under `/srv/apps/trenchnote` on heidilab, tailnet-only, defined in the
+  homelab repo (`docs/APPS.md`, `DECISIONS.md` §23 and §54 there). On
+  2026-10-10 the maintainer chose Compose over an LXC for all of their
+  PocketBase apps, on one image the homelab builds from the official release.
+
+**The decision above still stands**: one writable instance, no peers. Only
+the machinery under it differs, and the first amendment's lesson survives the
+correction intact — *one writable instance plus a working off-box copy*. The
+off-box copy that existed came from the homelab's restic job, not from
+anything in `deploy/`, and it has still never been restore-tested for this
+app (task 050).
+
+What this does **not** change: the supported self-host path is still
+`deploy/` (systemd, Caddy, built-in backups), and this repo still ships no
+container files (ADR 0003). The homelab's compose file is the maintainer
+containerizing their own instance — the case ADR 0003 explicitly leaves open.

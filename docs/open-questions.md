@@ -122,10 +122,10 @@ avoidable migration or compatibility cost.
 
 | Field | Detail |
 | --- | --- |
-| Why it matters | There is no running production instance to gate, the previous ledger was lost with the box, and the scripted smoke gate does not yet cover browser flows or offline replay on whatever replaces it. |
+| Why it matters | The only instance (tailnet-only, on the maintainer's homelab) runs 2026-07-10 code over plain HTTP and has never been gated, and the scripted smoke gate does not yet cover browser flows or offline replay. |
 | Options | Manual runbook only; scripted API/migration smoke gate; browser automation; staged release/versioning process. |
-| Current evidence | As of 2026-08-23 the VPS serving `app.trenchnote.com` is destroyed, `pb_data/` was not exported, and no replica or backup zip exists. The hostnames will be reused, so printed labels stay valid only if re-seeded `tag_code` values match. `scripts/smoke_test.sh` provides the scripted API/migration gate; `deploy/preflight.sh` and `deploy/verify-live.sh` exist and are provider-neutral. |
-| Recommendation | Treat the rebuild as a fresh install and make the backup destination plus a rehearsed restore part of standing it up, not a later phase — the loss already happened once. Re-seed `tag_code` values from the printed labels. Run `scripts/smoke_test.sh` and the deploy preflight against the new box before crews touch it; browser automation only where repeated failures justify it. |
+| Current evidence | The droplet behind `app.trenchnote.com` was retired: its `pb_data/` was copied to heidilab on 2026-08-05 and the droplet destroyed 2026-08-23. The copy holds test data only; nothing was lost. The heidilab instance is a Docker Compose stack defined in the homelab repo, backed up nightly by restic to B2, never restore-tested. `scripts/smoke_test.sh` provides the scripted API/migration gate; `deploy/preflight.sh` and `deploy/verify-live.sh` exist and are provider-neutral. |
+| Recommendation | Bring the instance to `main` and onto HTTPS (task 040) and rehearse a restore (task 050) before any real data goes in. Re-seed `tag_code` values from the printed labels. Run `scripts/smoke_test.sh` and the deploy preflight against the new box before crews touch it; browser automation only where repeated failures justify it. |
 | Validate | Smoke gate green on the new box, a scan of an existing field label resolving to its re-seeded asset, backup created and pulled off-box, restore rehearsal on a throwaway copy, page titles, auth, offline replay, file uploads, and rollback. |
 | Decision owner | Maintainer/deployment operator. |
 | Latest safe decision point | Before the replacement instance serves a single field scan. |

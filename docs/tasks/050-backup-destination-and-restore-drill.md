@@ -1,157 +1,108 @@
-# 050 — Give the new primary an off-box backup and a rehearsed restore
+# 050 — Rehearse a restore of the homelab instance, from its off-box backup
 
-Status: BLOCKED (executes on the homelab box, not from this repo)
+Status: BLOCKED (executes on the homelab machines after task 040, not from this repo)
 
 ## Context
 
-On 2026-08-23 the VPS serving `app.trenchnote.com` was destroyed and
-`pb_data/` was not exported. Every movement, reading, inspection, condition
-report and reservation was lost, along with every uploaded packing slip and
-damage photo. There was no replica, no backup zip, and no restore path.
-[`../current-state.md`](../current-state.md) records this as realized loss
-rather than risk, and names the remedy directly: *"the first deployment task
-on the replacement is a backup destination and a rehearsed restore, before
-crews put anything in it worth losing."* This is that task.
+ADR 0006's 2026-08-23 amendment set the rule this task enforces: *one
+writable instance plus a working off-box copy*, with the second half no more
+optional than the first. This task originally existed to create that
+off-box copy, on the belief that the droplet had been destroyed with no
+backup. That belief was wrong (ADR 0006, 2026-10-10 amendment), and the
+off-box copy already exists:
 
-It matters more on the replacement than it did on the droplet, not less. The
-maintainer confirmed on 2026-09-07 that the droplet is abandoned
-permanently — so there is no second copy of anything, anywhere, and no
-provider snapshot to fall back on. Until this task is `DONE`, the homelab
-box built in [`040`](040-homelab-primary-tailnet.md) is a single point of
-failure holding the only copy of whatever is put into it.
+- The instance lives at `/srv/apps/trenchnote` on heidilab, and `/srv/apps`
+  is a source of the homelab's nightly **restic → Backblaze B2** job, in its
+  entirety (homelab `DECISIONS.md` §10 and §23, `docs/APPS.md` → *Backup*).
+  At the droplet's destruction, two restic snapshots held its `data.db`
+  (homelab §25).
+- PocketBase's built-in nightly backup also writes zips into
+  `data/backups/`, which restic carries off the box with everything else.
 
-[`../DEPLOY.md`](../DEPLOY.md) → *Backups* already specifies the mechanism
-in full. This task is not a design exercise; it is the act of configuring
-one of the documented methods, getting the result off the box, and
-**performing** a restore rather than believing in one.
-
-`docs/current-state.md` also flags as **UNKNOWN** whether an offsite backup
-destination or a restore drill was ever operational on the destroyed VPS.
-That gap is what the data loss looks like from the outside. Closing it here
-means the answer stops being unknown.
+So the destination is **settled** — the homelab's restic repository, not a
+new bucket. What has never happened is a **restore**. [`../DEPLOY.md`](../DEPLOY.md)
+is blunt about it: *"a backup you have never restored is a hope, not a
+backup."* The drill is this task's deliverable.
 
 ## Scope
 
-**This task is executed by the maintainer, on the box and in the admin UI.**
-Hence `BLOCKED` — the same convention [`README.md`](README.md) describes for
-work that is specified here but cannot be carried out from this repo. An
-execution session cannot open the PocketBase admin UI, create bucket
-credentials, or verify a restored asset page, and must not attempt to.
+**Executed by the maintainer** on the homelab machines — restic's credentials
+are root-owned on heidilab, and an execution session in this repo must not
+read or copy them.
 
-**Depends on [`040`](040-homelab-primary-tailnet.md).** There is nothing to
-back up until the instance exists. Do not start this task first.
+**Depends on [`040`](040-homelab-primary-tailnet.md).** Drill the instance
+as it will actually run: on `main`, with hooks, on `homelab/pocketbase`.
 
 **Repo files this task may touch:**
-- `docs/current-state.md` — the **UNKNOWN** paragraph about whether an
-  offsite destination, SMTP, or restore drill was ever operational, which
-  becomes answerable for the new box once this is done.
-- `docs/architecture-status.md:31` — the deployment row's open question
-  "which backup destination is configured on day one".
+- `docs/current-state.md` — the *Backups* bullet in *Current deployment
+  topology and status*: add the date the restore drill was performed and
+  what it verified.
+- `docs/architecture-status.md` — the deployment-topology row's risk column,
+  which names the unrehearsed restore.
 - This file's `Status:` line.
 
 **Do NOT touch:**
-- `deploy/litestream.yml` or the Phase 6 Pi-replica material. Litestream
-  replication to a Pi is a *different*, optional layer (ADR 0006) and is
-  explicitly out of scope here. A scheduled backup that lands off the box is
-  the requirement; a streaming replica is not.
+- The homelab's restic configuration, keys or schedule. They are the homelab
+  repo's, and they already work for every other app.
+- `deploy/litestream.yml` or the Pi-replica material (ADR 0006, optional,
+  later). A replica is not a substitute for a rehearsed restore.
 - Application code, migrations, hooks, or `pb_public/`.
 
 ## Specification
 
-Pick **one** destination and make it work end to end. Both are documented in
-`../DEPLOY.md` → *Backups*; neither is better in the abstract.
+1. **Give the drill something to prove.** The instance has no uploaded files
+   yet, and a restore of an empty `storage/` proves nothing about one. In the
+   live instance, create a throwaway location, item and asset, log one move
+   with a packing slip attached (a photo of anything), and note the asset's
+   tag code. Wait for that night's restic run, or trigger one.
+2. **Restore on a different machine.** Restoring onto heidilab proves nothing
+   about surviving heidilab. Use the lemur, the homelab's staging box: pull
+   `/srv/apps/trenchnote` from the **latest B2 snapshot**, not from heidilab's
+   disk. The commands are homelab `docs/RECOVERY.md` → *Scenario C*, steps 3
+   and 4, restricted to that one path. The lemur's restic is deliberately
+   unconfigured (homelab §31): export the credentials from the password
+   manager into one shell for the drill and close it after. Do not install
+   `/etc/homelab-backup/env` on the lemur.
+3. **Boot it the way production runs it.** On the lemur, build the image
+   (`bash apps/pocketbase/build.sh`), put the restored folder at
+   `/srv/apps/trenchnote`, set `.env` to the lemur's own `BIND_ADDR` and a
+   free port from the lemur's registry in homelab `docs/APPS.md`, and
+   `docker compose up -d`.
+4. **Verify the ledger, not the container.** Open the throwaway asset's page:
+   its movement history is intact, **and the attached packing slip loads**.
+   `pb_data/storage/` is the receiving log's evidence (ADR 0013), and a backup
+   that silently drops it is the failure worth catching.
+5. **Clean up.** Take the drill copy down on the lemur. Nothing on the lemur
+   is backed up and nothing should live there (homelab §31). Mark the
+   throwaway records in the live instance with a note; the ledger is
+   append-only, so they are not deleted.
 
-**Method 1 — PocketBase's built-in backups to S3-compatible storage
-(recommended).** Admin UI → Settings → Backups: set a nightly cron
-(`0 3 * * *`), keep 7, and point the same screen at a bucket.
-
-**Method 2 — offsite copy of the backup zips.** Keep the built-in schedule
-writing to `pb_data/backups/`, and pull them from another machine on a cron
-via rsync over the tailnet.
-
-### Credential hygiene, if Backblaze B2 is chosen
-
-B2 is already in use on `llmbox` for the unrelated vault-clerk restic
-backups. **Create a new bucket and a new B2 application key scoped to it.**
-Do not reuse the vault-clerk key: it is root-owned, its file must never be
-read or copied, and losing or leaking the restic password it sits beside is
-unrecoverable. Two independent backup systems get two independent keys.
-
-### The restore drill is the deliverable
-
-A configured destination is half the task. `../DEPLOY.md` is blunt: *"a
-backup you have never restored is a hope, not a backup."* Perform the drill
-on a **different machine** from the one being backed up — restoring onto the
-same box proves nothing about surviving that box's loss:
-
-1. Clone the repo, run `PB_VERSION=0.39.6 ./scripts/setup.sh`.
-2. Take a real backup zip **from the off-box destination** — not from
-   `pb_data/backups/` on the primary. Fetching it from the destination is
-   part of what is being tested.
-3. Unpack it into a fresh `pb_data/` (or use the admin UI restore), start
-   PocketBase.
-4. Open an asset page and confirm its movement history is intact, and
-   confirm an uploaded file (a packing slip or damage photo) still loads —
-   `pb_data/storage/` is as much the ledger's evidence as the database is,
-   and a backup that silently omits it is the failure mode worth catching.
-
-Record the date the drill was performed and what was verified. That date is
-the fact `docs/current-state.md` is missing.
+Record the date and what was verified. That date is the fact
+`docs/current-state.md` is missing.
 
 ## Acceptance criteria
 
-- [ ] A backup schedule exists on the primary (nightly, several retained),
-      visible in Admin UI → Settings → Backups.
-- [ ] Backups land **off the box** — in an S3-compatible bucket, or pulled
-      to a second machine. A backup sitting only on the primary does not
-      satisfy this task.
-- [ ] If B2 was used: a dedicated bucket and a dedicated application key,
-      not the vault-clerk restic credentials.
-- [ ] The restore drill was **performed**, on a different machine, from a
-      zip retrieved from the off-box destination.
-- [ ] The restored instance serves an asset page with intact movement
-      history, **and** an uploaded file from `pb_data/storage/` loads.
-- [ ] `docs/current-state.md` updated: the UNKNOWN paragraph now states, for
-      the new box, which destination is configured and the date the restore
-      drill was performed and passed.
-- [ ] `docs/architecture-status.md:31` open question about the day-one
-      backup destination closed.
+- [ ] The restore came from the **B2 snapshot**, onto the **lemur**, not
+      from heidilab's disk and not onto heidilab.
+- [ ] The restored instance ran on `homelab/pocketbase` at the same version
+      as production.
+- [ ] The test asset's page showed its movement history, and the attached
+      packing slip loaded from the restored `storage/`.
+- [ ] The drill copy was removed from the lemur afterwards.
+- [ ] `docs/current-state.md` *Backups* bullet states the drill date and
+      what passed; `docs/architecture-status.md` deployment row updated.
 - [ ] Docs reviewed per the docs-as-code checklist in
-      [`../../CLAUDE.md`](../../CLAUDE.md). No ADR expected — `../DEPLOY.md`
-      already specifies the mechanism and ADR 0006 already requires a working
-      off-box copy; this task carries that decision out rather than making a
-      new one.
+      [`../../CLAUDE.md`](../../CLAUDE.md). No ADR expected: ADR 0006 already
+      requires a working off-box copy, and this task proves one.
 
 ## Guardrails
 
-- **Never copy `pb_data/` while the server is running.** SQLite keeps
-  in-flight writes in `-wal` sidecar files, and a naive `cp` produces a copy
-  that looks fine until it is needed. Use the built-in backup (which handles
-  locking) or stop the service first. `../DEPLOY.md` calls this "rule one".
-- **`pb_data/storage/` is not optional.** The uploaded packing slips and
-  damage photos are dispute evidence (ADR 0013, ADR 0019). A backup covering
-  only the database is not a backup of the ledger.
-- **Do not build the Pi replica or Litestream here** (ADR 0006 Phase 6).
-  That layer is optional, comes later, and is not a substitute for a
-  scheduled off-box backup — the destroyed VPS is proof that a replica which
-  is always "later" protects nothing.
-- **Do not treat this as done because it is configured.** The drill is the
-  acceptance criterion. The last deployment presumably had good intentions
-  too.
-- Do not read, print, or copy the vault-clerk credential files on `llmbox`
-  under any circumstances, including to "check the B2 account". Create fresh
-  credentials instead.
-
-## Definition of done
-
-- [ ] Acceptance criteria all checked.
-- [ ] Not applicable: no build, no migrations, no `sw.js` bump — this task
-      changes no application code.
-- [ ] Documentation updated (`docs/current-state.md`,
-      `docs/architecture-status.md`); `AGENTS.md` mirrored only if
-      `CLAUDE.md` changed, which it should not.
-- [ ] `Status:` above set to `DONE`. No `ROADMAP.md` milestone is tied to
-      this task.
-- [ ] Committed (author: maintainer only, **no `Co-Authored-By` trailer**)
-      with a message naming the destination and the drill date. Then stop
-      and show the maintainer.
+- **Never copy a live `pb_data/`.** SQLite keeps in-flight writes in `-wal`
+  sidecars, and a naive copy looks fine until it is needed. The restic
+  snapshot is the source here; for anything else, `docker compose down` first.
+- **Never read or copy restic's credentials into this repo or a task file.**
+  They sit in root-owned files on heidilab; losing or leaking the repository
+  password is unrecoverable.
+- **Configured is not done.** The drill is the acceptance criterion.
+- No real field data in the instance until this task is `DONE` (task 040's
+  guardrail, restated because this is the task that lifts it).

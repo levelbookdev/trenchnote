@@ -43,3 +43,15 @@ The supported deployment story (docs/DEPLOY.md) is deliberately minimal:
 - Revisit if TrenchNote ever grows a second process — that's the point
   where compose earns its keep, and also a smell that ADR 0001 is being
   violated.
+
+## Note — 2026-10-10: the maintainer's own instance runs under Compose
+
+The maintainer's homelab runs TrenchNote as a Docker Compose stack, alongside
+the other PocketBase apps, on an image the homelab repo builds from the
+official release (homelab `DECISIONS.md` §54). That is the "someone
+containerizing it themselves" case above, and it changes nothing here: the
+compose file lives in the homelab repo, this repo still ships no Dockerfile
+or compose file, and `deploy/` remains the supported path for self-hosters.
+The homelab's reasons are its own — one backup scope and one promotion
+mechanism across several apps — and are not an argument that TrenchNote's
+self-hosters should need a container runtime.

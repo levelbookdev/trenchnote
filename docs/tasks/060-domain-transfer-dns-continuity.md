@@ -6,8 +6,9 @@ Status: BLOCKED (waits on the registrar transfer; executes at the DNS host and o
 
 `trenchnote.com` serves the public project site from GitHub Pages. It is
 live, and it is the only TrenchNote presence on the internet right now — the
-app instance behind `app.trenchnote.com` was destroyed on 2026-08-23 and has
-not been replaced (see [`040`](040-homelab-primary-tailnet.md)).
+droplet behind `app.trenchnote.com` was retired on 2026-08-23, and the app now
+runs tailnet-only on the maintainer's homelab (see
+[`040`](040-homelab-primary-tailnet.md)).
 
 The registration is mid-transfer from Namecheap to Porkbun, noted in
 [`../../ROADMAP.md`](../../ROADMAP.md) under *Ops follow-up — domain

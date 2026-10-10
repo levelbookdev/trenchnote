@@ -5,11 +5,12 @@ hostname from the [README](README.md) runbook — the one the QR labels encode).
 New deploy instead? Use [README.md](README.md). The why behind these commands
 is in [docs/DEPLOY.md → Updating](../docs/DEPLOY.md#updating).
 
-> **No instance is deployed as of 2026-08-23.** The VPS that served
-> `app.trenchnote.com` was destroyed without exporting `pb_data/`, so the
-> primary is being rebuilt from scratch on self-hosted hardware at the same
-> hostname. Until it is back up, this file is the procedure for *afterwards* —
-> stand the box up with [README.md](README.md) first.
+> **This file is for a systemd install made with [README.md](README.md).** The
+> maintainer's own instance (2026-10-10) is not one: it runs as a Docker Compose
+> stack on the homelab, tailnet-only, and is updated by the homelab repo's
+> `docs/APPS.md` — `git pull` in its `app/` checkout and recreate the
+> container. The discipline below (back up first, read the migrations) applies
+> to it all the same. Status: [`docs/current-state.md`](../docs/current-state.md).
 
 The whole update is `git pull` + restart — schema ships as migrations that
 auto-apply on boot. The discipline around it is what this checklist is for,
@@ -78,17 +79,19 @@ If a migration itself misbehaved and you need the data back, restore the
 step-1 backup: Admin UI → Settings → Backups → restore on the zip (it unpacks
 and restarts PocketBase). This is why step 1 is non-negotiable.
 
-## The 2026-07 catch-up jump — obsolete
+## The 2026-07 catch-up jump
 
 This file used to end with a plan for dragging a long-lived box from a
 pre-readings schema up to `main`, migration by migration. That box was the VPS
-behind `app.trenchnote.com`; it was destroyed on 2026-08-23 and its `pb_data/`
-was not exported, so there is no old database left to drag anywhere. The
-replacement starts from `main` and applies every migration on first boot, in
-order, with nothing to stage.
+behind `app.trenchnote.com`. The section was removed on 2026-08-23 in the
+belief that the VPS had been destroyed with its data; in fact its `pb_data/`
+had been copied to the maintainer's homelab on 2026-08-05, and it still sits
+at migration `1783468808` — 17 of 25.
 
-The section is gone rather than updated because a catch-up plan is only ever
-about a *specific* box's specific lag. Write a new one if a future instance
-ever falls behind — and note that the reason this one never got applied is
-that the box stopped existing first, which is an argument for step 1 of this
+The plan is not coming back, because the lag it was written for no longer
+needs one: that database holds only test data, so a jump straight to `main`
+risks nothing worth staging around. Task 040 brings it forward. The old plan is
+in `git log -p deploy/UPDATE.md` if a future instance with real data ever falls
+this far behind — and the reason this one never got applied is that nobody
+updated the box while it was live, which is an argument for step 1 of this
 checklist, not against it.

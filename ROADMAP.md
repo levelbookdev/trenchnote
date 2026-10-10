@@ -53,7 +53,9 @@ in [CLAUDE.md](CLAUDE.md).
 - **No Docker / container self-host.** ADR 0003 chose boring ops (a single
   binary + systemd, or a bare Pi) precisely so a $5 VPS or a trailer Pi is
   enough. Containers add a dependency and a build/runtime layer the target
-  self-hoster should not need.
+  self-hoster should not need. (The maintainer's own instance runs under the
+  homelab's Compose setup — that is outside this repo and blesses nothing
+  here; ADR 0003's 2026-10-10 note.)
 - **No rich *in-core* reporting, dashboards, burn-rate, or email digests.**
   Office intelligence is the premium sidecar's job (ADR 0011). The core answers
   what/where/who and exports raw data; analysis about that data is paid and
