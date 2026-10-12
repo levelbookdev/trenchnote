@@ -60,6 +60,47 @@ once here and referenced by the items:
 > item 6 is really *generalize the ledger we already have* to also carry
 > sighting events — not build one from scratch. It is written that way below.
 
+> **Evidence addendum — historical job records (added 2026-10-11).** A review of
+> a general contractor's past job records, spanning about fifteen years and
+> several water and wastewater jobs, turned up equipment and materials paperwork
+> from before any of this existed. Corroborating evidence, not a new incident.
+> What it adds:
+>
+> - **Rental trackers kept by hand on a live job.** A shoring tracker records,
+>   per item, the system it belongs to, quantity, ordered, delivered, rental
+>   start, *called out* (the off-rent call made) and *picked up* (the vendor
+>   actually collected it). An off-rent table records category, item, vendor,
+>   current use and location, **off-rent trigger**, target call-off date, action
+>   and status. The triggers are construction events, not dates ("after slide
+>   gate is grouted", "after recirculation loop complete", "after startup
+>   complete"), and the target dates that were filled in read `TBD` or `ASAP`.
+>   One rented item had
+>   been on rent for over two years with its vendor recorded as unknown. Enriches
+>   item 12.
+> - **A third dialect of the equipment timecard.** Monthly per-job equipment
+>   lists ran for eight years: job, item number, description, model, an `X` per
+>   week across four months, notes, prior hours and current hours. Each PM got
+>   the list and sent it back. At least one "returned" file is byte-identical to
+>   the one sent: no update made, the same decay the 2020 timecards show.
+>   Enriches item 7.
+> - **Spare parts handed over under signature.** A spare-parts storage and
+>   transfer record carries a custody-transfer sentence and three signatures;
+>   about fifteen were signed over to the owner in six months at one job's
+>   closeout. TrenchNote has no item for a handover to a party outside the
+>   ledger. The nearest shipped shapes are consumption (ADR 0005) and the
+>   receive-confirmed manifest (ADR 0020), and neither is quite it.
+> - **Permanent equipment tracked by tag while it waits.** An equipment status
+>   log carries tag, manufacturer, rep, submittal number, status, lead time,
+>   release, delivery and **storage location**. The procurement half stays
+>   outside the PO wall (ADR 0013); delivery and storage location are
+>   TrenchNote's facts, and this is goal 2's staging yard in spreadsheet form.
+> - **Material release and laydown standards.** Numbered material releases to
+>   suppliers, tied to submittal approval with a two-week follow-up, and an
+>   older internal standard that tied material ordering, laydown location and
+>   invoice coding together. Only the receiving and location halves are
+>   TrenchNote's; ordering and invoice coding are the accounting department's
+>   spreadsheet (ADR 0013, and the billing non-goal in CLAUDE.md).
+
 ---
 
 ## 1. Pre-printed unassigned tag pools
@@ -275,6 +316,11 @@ sidecar).
 column) make the report complete, but a first cut can derive columns from the
 movements ledger alone.
 
+**Evidence (2026-10-11 addendum).** A third dialect of the same ritual: monthly
+per-job lists with an `X` per week and prior and current hours, sent to each PM
+and returned. One returned file was identical to the one sent. A derived report
+cannot come back unchanged, because nobody has to remember to fill it in.
+
 ## 8. Company fleet numbers as tag codes — **ADOPTED**
 
 **Status: adopted as a live deployment convention** — not a future item. This
@@ -416,6 +462,16 @@ dollar. No vendor integration (ownership stays manual).
 
 **Depends on.** Nothing hard; the date fields exist (migration `1783468816`).
 A date comparison plus a render change.
+
+**Evidence (2026-10-11 addendum).** Real off-rent tracking keys on a
+construction event ("after startup complete"), not a date, and the target
+dates that were filled in read `TBD` or `ASAP`. It also separates the call-off from the pickup, which are two
+facts a single `off_rent_date` cannot tell apart. Neither changes this item's
+shape: the flag still compares a date. They are a reason to keep the human's
+trigger visible in a note rather than to model it, and a reason to read
+`off_rent_date` as "called off", not "gone". One rental on the same list had
+been on rent over two years with no known vendor, the black hole in its
+rented form.
 
 ---
 
