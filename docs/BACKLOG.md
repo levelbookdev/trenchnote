@@ -101,6 +101,99 @@ once here and referenced by the items:
 >   TrenchNote's; ordering and invoice coding are the accounting department's
 >   spreadsheet (ADR 0013, and the billing non-goal in CLAUDE.md).
 
+> **Evidence addendum — an equipment department's records (added 2026-10-19).**
+> The same kind of contractor's equipment department files (live to 2026), its
+> 2015 equipment manual, and its parent company's warehouse procedures.
+> Corroborating evidence, not a new incident. What it adds:
+>
+> - **The receiving end of incident 2.** About 1,000 weekly and monthly cards
+>   over 46 months, each re-keyed by hand into the accounting system's
+>   equipment module and moved to an `Approved` folder, tracked on a
+>   job-by-month grid of "received, not input" against "completed". One month
+>   held 21 cards in about ten naming schemes and three file formats; a 2025
+>   card still used the 2014 revision of a form revised in 2018, which lacks the
+>   job-charged and idle columns. One truck was charged to three jobs in three
+>   days. Enriches item 7.
+> - **The location of record is a monthly cell.** A 2025 master list keeps one
+>   location per asset per month for 390 assets. Of 3,220 filled cells, 44 read
+>   `???`, 76 `N/A` and 84 `SOLD`: an explicit unknown state, and disposal kept
+>   in the location column. 48 assets are located by a person, not a site. When
+>   a card does not arrive, billing falls back to this list, so a stale entry is
+>   billed as truth. Enriches items 2 and 5.
+> - **The 2015 manual states incident 1 as policy.** It forbids buying
+>   equipment for a job and "sequestering" it outside the master inventory, and
+>   its acquisition checklist tags a new asset only *after* delivering it to the
+>   user. It also requires a yearly physical confirmation of every asset's
+>   location, makes "Idle" an approved status that releases the asset to other
+>   projects, and logs a non-binding expected move-off date when an asset is
+>   requested. Enriches items 1, 2, 5 and 12.
+> - **Disposal is a final location.** The manual records disposal as a transfer
+>   to Sold, Destroyed, Junked, Lost or Stolen, with the record kept forever as
+>   inactive; a separate checklist lists six disposal methods. TrenchNote has no
+>   retirement event, and no item here proposes one yet.
+> - **Four classes of thing.** The parent company's warehouse procedures sort
+>   everything into equipment (individually numbered), quantity equipment ("one
+>   equipment number for all items of that same description": forms, shoring,
+>   crane mats, counted back on return), small tools, and consumables (charged
+>   at order, not expected back). Unreturned tools and quantity equipment are
+>   charged at replacement value, returns are counted as they are unloaded, and
+>   a move between projects needs a signed transfer request. A per-item class
+>   that decides unit-or-count identity and whether a return is owed bears on
+>   [open question 7](open-questions.md) and on whether equipment and materials
+>   are one catalog.
+> - **Custody can sit with a person.** In records from 2015 and 2025, vehicles
+>   and some containers are held by a named person rather than a site or job.
+>   Whether a person can be a holder, given that field users have no accounts,
+>   is open.
+> - **Receipt and installation merged.** A plant job's embed log (37 marked wall
+>   pipes and sleeves) keeps one "check in" column: mostly a date and initials,
+>   twice the word "Installed". Two movements, a receive and a consume (ADRs 0013
+>   and 0005), recorded as one fact.
+> - **An inspection owed only on working days.** A daily crane inspection log
+>   owes a pre-trip check only on days the crane works; idle days are struck
+>   through. ADR 0014's calendar `interval_days` would show such a requirement
+>   overdue on every idle day. A design question, not a change.
+> - **A calibration clock that stops on the shelf.** The parent company's
+>   calibration procedure stops the clock while an instrument sits in its
+>   warehouse ("shelf time not included"): it is calibrated when it comes back
+>   from a project and gets a new sticker, with the issue date and a new due
+>   date, when it is next issued. A due date computed from the last calibration
+>   plus an interval would show every shelved instrument overdue; for this class
+>   the due date of record is the sticker's, set at issue. With the crane log,
+>   a second requirement whose clock does not run on the calendar (ADR 0014).
+> - **Receiving has a disposition, and storage has a level.** The same
+>   company's receiving procedure gives every delivery one of four
+>   dispositions: inspected and stored; over, short, damaged or incorrect;
+>   released straight to the work, with where it went noted; or held for
+>   inspection, hold-tagged and segregated so it cannot be installed. Storage is
+>   rated A to D, from indoor and climate-controlled to a designated, drained
+>   outdoor yard on cribbing. The receiving report records the storage location,
+>   time in and out, condition checks and the documents that came with the
+>   shipment. ADR 0013 records what arrived and its condition, not whether a
+>   delivery is on hold, stored, or already gone into the work; a hold would be
+>   an event and a later release another, the state derived. The storage level
+>   is a property of the location.
+> - **The freight bill decides the damage claim.** Its over-short-damaged-
+>   incorrect report keeps the four cases apart, records which document
+>   comparison found each (packing slip against PO, freight bill against
+>   packing slip, freight bill against count), and asks whether the carrier's
+>   agent signed a damage notation on the freight bill. That signature wins the
+>   claim. A reason to prompt for a photo of the signed freight bill beside the
+>   packing slip, not to model the report; ADR 0013's `osd_note` stays free text.
+> - **A mark is a count, not a unit.** The contractor's 2017 house templates
+>   for valve and pipe-support logs end in release date, expected delivery,
+>   backorder, actual delivery date, packing slip and storage location. Valves
+>   are identified by valve number; pipe supports by a design mark carrying a
+>   quantity and a revised quantity. The delivery and location tail is
+>   TrenchNote's (ADR 0013) and the release and backorder half is procurement.
+>   A mark counted against a design quantity is the permanent-materials
+>   counterpart of "quantity equipment".
+> - **Call-off numbers are old, and stop dates decay into words.** A rental
+>   ledger from 2002 to 2007 (419 rentals) has a call-off number column, filled
+>   on 116 rows. Of its filled "rental stop" cells, about 121 hold a word
+>   instead of a date: "off rent" (74), "renting", "cancelled", "stopped".
+>   A separate sheet counts idle days. Enriches items 5 and 12.
+
 ---
 
 ## 1. Pre-printed unassigned tag pools
@@ -128,6 +221,12 @@ claim flow is a new branch of the "unknown tag" scan result). Interacts with
 the fleet-number convention (item 8): pooled codes stay in the invented
 short-code namespace, distinct from stenciled fleet numbers.
 
+**Evidence (2026-10-19 addendum).** A company equipment procedure puts "take
+delivery, deliver to user" before "tag the asset", and the manual it belongs to
+forbids buying for a job and holding the item outside the master inventory.
+Incident 1's gap is written into the procedure, so a policy alone does not
+close it; a tag at the point of arrival would.
+
 ## 2. Sightings / last-confirmed-seen
 
 **Motivation.** Incident 1: the ledger says where a thing was *last moved*, but
@@ -151,6 +250,12 @@ not a chore enforced. (Same restraint the inspections module keeps, ADR 0014.)
 **Depends on.** Item 6 — a sighting is one `reading_type` on the generalized
 readings ledger, not its own collection. Inventory-walk mode (planned Session
 4) is the natural capture UI.
+
+**Evidence (2026-10-19 addendum).** The office's location of record is one
+cell per asset per month, and 44 of 3,220 filled cells read `???`. The same
+company's manual asks for a physical confirmation of every location once a
+year. A sighting is the event that replaces both the monthly guess and the
+yearly walk.
 
 ## 3. Missing status + passive resolution
 
@@ -321,6 +426,13 @@ per-job lists with an `X` per week and prior and current hours, sent to each PM
 and returned. One returned file was identical to the one sent. A derived report
 cannot come back unchanged, because nobody has to remember to fill it in.
 
+**Evidence (2026-10-19 addendum).** The receiving end: about 1,000 cards over
+46 months, each re-keyed into the accounting system and tracked on a
+"received, not input / completed" grid, in about ten naming schemes and three
+formats in one month, some on a form two revisions old. One truck went to
+three jobs in three days, so the export's segments must split within a week
+(ADR 0022).
+
 ## 8. Company fleet numbers as tag codes — **ADOPTED**
 
 **Status: adopted as a live deployment convention** — not a future item. This
@@ -472,6 +584,15 @@ trigger visible in a note rather than to model it, and a reason to read
 `off_rent_date` as "called off", not "gone". One rental on the same list had
 been on rent over two years with no known vendor, the black hole in its
 rented form.
+
+**Evidence (2026-10-19 addendum).** A large contractor's rental procedure
+stickers each rented unit with a company tracking number, the vendor and the
+serial, photographs damage on arrival, and discontinues the rental against a
+vendor **release number** that the invoice is later checked against. That
+number is the call-off's proof, and the natural thing to record on the
+off-rent event, in its note if nowhere else. The practice is old and patchy:
+a 2002–2007 rental ledger has the column filled on about a quarter of its
+rows, and records 74 stops only as "off rent", a call-off nobody can date.
 
 ---
 
