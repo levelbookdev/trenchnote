@@ -194,6 +194,89 @@ once here and referenced by the items:
 >   instead of a date: "off rent" (74), "renting", "cancelled", "stopped".
 >   A separate sheet counts idle days. Enriches items 5 and 12.
 
+> **Evidence addendum — the equipment system's launch papers and pre-use forms
+> (added 2026-10-21).** The rest of the 2015 equipment manual's folder from the
+> 10-19 read: the launch deck and memo, the procedure for running equipment in
+> the accounting system, the timecard instructions, a 2016 chart of the
+> company's lists of record, the parent company's equipment, maintenance and
+> vehicle procedures, a 2024 check-out form, and the safety department's blank
+> pre-use checklists. Corroborating evidence, not a new incident. What it adds:
+>
+> - **The launch deck asks TrenchNote's questions.** "What do we own? What are
+>   the details? Where is it? When did it get there? When do we expect it to be
+>   available?" Its "what this isn't" list (cost tracking, depreciation,
+>   maintenance, hourly billing) ends every line with "(yet)". The non-goals in
+>   [CLAUDE.md](../CLAUDE.md) carry no "yet".
+> - **At launch, one item in six had no known location.** The launch memo
+>   counts 403 owned items, 64 of them at location "Unknown", and equipment
+>   still shown at two jobs that had demobilized. It calls the first inventory,
+>   from the equipment staff's own records, a bad example, and the second, a
+>   walk of each site by its PM, "better but lots of errors". The 2025 `???`
+>   cells above are the same gap ten years on. Enriches items 2 and 3.
+> - **Location is corrected upstream of billing, never inside it.** A wrong job
+>   on the month's billing batch cannot be fixed in the batch: the batch is
+>   cleared, the transfer record corrected, and the batch run again. Rate and
+>   idle overrides are made in the batch; location is not. That is item 7's
+>   line: TrenchNote says where things were, and accounting decides what that
+>   costs.
+> - **A new asset's first location is a transfer.** The procedure enters every
+>   new asset at the home shop and then records a transfer to its first job, so
+>   its location history starts with an arrival. Each transfer carries an in
+>   date and an estimated out date, and a mass transfer moves several assets
+>   between the same two places in one entry. An asset created in TrenchNote's
+>   admin UI with `current_location` already set has no arrival in the ledger.
+> - **The timecard asks for a reading on the way out.** Hour-meter and odometer
+>   readings are due at month end and again when an item leaves a site, with
+>   the move-off date. That is ADR 0012's optional reading at a move, already
+>   shipped. The "date first on site" and "date moved off site" columns are the
+>   day the move happened, not the day it was keyed: ADR 0023's `moved_at`.
+> - **What earns a number.** Tracked equipment is owned heavy equipment,
+>   vehicles and trailers, anything needing a state registration, construction
+>   equipment above a value line with more than a year of life, anything
+>   capitalized, and anything else the equipment manager chooses. Equipment
+>   bought on a job's own budget is still entered, and billed at nothing. The
+>   asset number is assigned in the office once a purchase is imminent; the
+>   physical tag goes on after delivery, so for a while the number exists and
+>   nothing carries it. A small pump like incident 1's likely falls below the
+>   value line and is left to the catch-all. Enriches item 1.
+> - **The equipment list is one list of record among several.** A 2016 chart
+>   names the lists of record: the equipment list, DMV and air-board
+>   registration lists, accounting's fixed assets, the auto and inland-marine
+>   insurance schedules, the property-tax list, and hardware and software
+>   lists. Each has its own keepers, and accounting reconciles across them.
+>   Registration, insurance and tax stay outside TrenchNote; what it can offer
+>   the others is a location to reconcile against (item 10).
+> - **A two-party check-out on paper.** The safety department's 2024 check-out
+>   form issues tools to a person: employee number and name, job number,
+>   customer, foreman, division and jobsite address, then lines of tool number,
+>   description and in/out, signed by whoever issued and whoever received. The
+>   return is marked on the same sheet as the issue. TrenchNote's `moved_by` is
+>   one free-text name, and custody by a person exists only as `assigned_to`
+>   (ADR 0012). Bears on the custody question above.
+> - **Out-and-back inspections in the yard.** The parent company's maintenance
+>   procedure inspects equipment on a type-specific form before it goes to a
+>   project and again on return, noting damage on the return form. Damage found
+>   on a project is reported with photos, and the machine is out of service
+>   until the equipment manager clears it. That is ADR 0019's `condition_note`
+>   at delivery and return and ADR 0014's `removed_from_service`, done by a
+>   mechanic in the yard rather than a crew on site.
+> - **Pre-use checklists are a daily layer, and stay on paper.** Blank forms for
+>   forklifts, a towable generator, scissor and boom lifts, and scaffold mark
+>   every item Y/N/N/A or pass/fail at the start of each shift ("no items are to
+>   be left blank"), go to a supervisor for approval, and end in a "safe to
+>   operate" signature. ADR 0014 records an inspection's result, not its line
+>   items, and refuses sign-off chains, so at most TrenchNote holds a result
+>   with a photo of the completed sheet. The forklift form has an hour-reading
+>   row for every day: the first place a meter is read, upstream of the
+>   timecard's month-end reading. The generator form was cloned from the
+>   forklift's and still says "forklift" in its fluid checks.
+> - **Vehicles are assigned two ways.** The parent company's vehicle policy
+>   assigns a vehicle to an employee or to a project, and it goes back to the
+>   equipment department when the need ends or the project closes. Mileage-based
+>   maintenance relies on the driver reporting the odometer weekly. Custody by a
+>   person, and readings reported by the custodian, both as ADR 0012 shaped
+>   them.
+
 ---
 
 ## 1. Pre-printed unassigned tag pools
