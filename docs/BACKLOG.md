@@ -277,6 +277,91 @@ once here and referenced by the items:
 >   person, and readings reported by the custodian, both as ADR 0012 shaped
 >   them.
 
+> **Evidence addendum — the tracker already bought, and other registers (added
+> 2026-10-23).** The same contractor's IT department files (its 2018
+> tool-tracking evaluation and subscription, and the 2024 build sheet for
+> jobsite network kits), its archive-room box register, two exports of its
+> equipment master from Vista, the equipment department's per-unit folders,
+> and its monthly equipment log. Corroborating evidence, not a new incident.
+> What it adds:
+>
+> - **A tool tracker was bought, at the tier TrenchNote is shaped like.** In
+>   2018 IT compared GigaTrak, ToolHound and ToolWatch, plus the tool partners
+>   Viewpoint lists for Vista. GigaTrak's quote offered rugged handhelds and
+>   Bluetooth scanners, warning that its small round labels "may not be
+>   readable with the mobile devices camera". The company bought ToolWatch
+>   Essentials, capped at 500 assets: tools and equipment, materials and
+>   consumables, pick tickets and transfers, requisitions, verify, dashboards.
+>   It turned down the Pro tier, which added service and calibration, job cost
+>   and billing, and counts. It renewed at the same tier in 2021, and at the end
+>   of 2021 still had users in three roles (admin, tool manager, foreman), each
+>   an employee record with a home stock location. Yet the location list of
+>   record in 2022 to 2025 was still Vista's export and spreadsheets (the
+>   addenda above). ToolWatch's own feature grid gives the back-office tier
+>   alone tool kits, retiring tools, service plans, work orders, purchase
+>   orders, job cost and billing charges, and invoices. That list is,
+>   nearly line for line, the non-goals in [CLAUDE.md](../CLAUDE.md).
+> - **The accounting master keeps location in two exclusive columns.** Vista's
+>   January 2022 export (390 owned units, 115 columns) gives each unit either a
+>   yard or office location or a job, never both: 219 sit on a job, 120 at a
+>   yard or the office, 44 at location "Unknown", and 7 have neither. So about
+>   one unit in eight had no known place, the same gap as the 2015 launch memo's
+>   one in six. One unit in eight names an operator: custody by a person
+>   again. The September 2023 list (570 rows) keeps disposal in the location
+>   column ("Sold/Gifted to Others" 117, "Junked/Trashed" 36, "Stolen" once),
+>   and one location reads `NON-OPP Rocky Mountain Yard`: a status packed
+>   into the location's text. Enriches items 2, 5 and 8.
+> - **The master stores tag codes fixed-width.** Every equipment code in the
+>   2022 export is nine characters, padded inside: `   H-  06`, `  TC- 114`.
+>   386 of 390 carry internal spaces. The per-unit folders and the stencils
+>   write `H-06`. A code copied out of the master brings its padding along,
+>   the likely source of the stray spaces item 8 records. Enriches item 8.
+> - **The master separates "attached to" from "component of".** Vista carries
+>   both relations on a unit, each with its own description fields. In 2022
+>   one unit of 390 used the first (truck crane `TC-114` on truck `T-114`) and none
+>   used the second. The accounting vendor draws the same line as item 13
+>   against ADR 0021's gang boxes, and the field barely uses either.
+> - **Status lives in folder names.** The equipment department keeps 486
+>   per-unit folders, one per fleet number, filed under class prefixes. About
+>   36 folder names carry a final state, in at least six spellings (`SOLD`,
+>   `- SOLD`, `(Sold)`, `Junked`, `total loss`, `NON-OP`), and one reads
+>   `(LEASED)`. Enriches item 5 and the disposal point above.
+> - **IT built a gang box without ever seeing ADR 0021.** Since 2024 a
+>   jobsite network kit is a rolling case of four tagged components. In the IT
+>   asset system (Freshservice) the kit is a parent asset whose tag is the
+>   patch panel's. Each component carries its own tag and serial, is linked "in
+>   rack" to the kit, and has its location set to a placeholder named "Project
+>   Kit", so its place comes from the kit. The kit, not its components, is
+>   assigned to the PM or superintendent and linked to the job's site-request
+>   ticket. The job has to be requested as a location before the kit can sit
+>   there; until then the kit's place is written into its network name
+>   (`… – In-Stock` renamed to `… – <job> – <name>`). Corroborates ADR 0021
+>   (contents derive location from the box, the box moves as one) and bears
+>   on the custody question above.
+> - **A register with numbers waiting.** The archive room's box register sets
+>   aside 5,000 container numbers in sequence. 3,596 are used and 1,404 wait
+>   for boxes. Two numbers that were never used are marked "Voided Number" and
+>   kept, not reissued. Each box is located by room plus a rack-and-shelf code
+>   (`J3`), and a destroyed box stays in the register with a flag. A numbered
+>   pool ahead of the things it will name is item 1, kept by hand. The void
+>   rule is ADR 0010's. TrenchNote's locations are flat, and whether a shelf
+>   inside a room is a location of its own is a question, not a proposal.
+> - **Demand comes before the unit.** The monthly equipment log's per-job
+>   sheets list equipment by fleet number with dates in and out, and its
+>   pipeline sheet lists units planned for jobs not yet started. In the
+>   January 2025 log, four rows in two job sheets read `TBD` in the unit column
+>   against a kind of machine ("Office Trailer", "Excavator 308 Rubber
+>   Tracks"), one with a date required. TrenchNote's reservations name one
+>   asset, so a request for "a 308, any 308" has nowhere to go until a unit is
+>   picked. A design question, not a change.
+> - **Heavy iron already reports its own hours.** An April 2024 dealer quote
+>   installs CAT Product Link on 30 "remaining machines in the fleet", and a
+>   January 2022 export of the master is named for Tenna, a GPS tracking service. For
+>   machines with a device, the hour meter already lives somewhere else. That
+>   strengthens item 6's wall (no telematics ingestion): manual readings
+>   matter most for what has no device, such as pickups, trailers and small
+>   gear.
+
 ---
 
 ## 1. Pre-printed unassigned tag pools
@@ -309,6 +394,10 @@ delivery, deliver to user" before "tag the asset", and the manual it belongs to
 forbids buying for a job and holding the item outside the master inventory.
 Incident 1's gap is written into the procedure, so a policy alone does not
 close it; a tag at the point of arrival would.
+
+**Evidence (2026-10-23 addendum).** The same company's archive room already
+runs a pool by hand: 5,000 box numbers set aside in sequence, 1,404 still
+waiting, and the two never used kept as "Voided Number" rather than reissued.
 
 ## 2. Sightings / last-confirmed-seen
 
@@ -421,6 +510,11 @@ two distinct at design time).
 
 **Depends on.** Nothing hard; a field on `assets` plus render changes.
 Underpins items 3 and 9.
+
+**Evidence (2026-10-23 addendum).** With no status field, status goes wherever
+there is text: into the location (`NON-OPP Rocky Mountain Yard` in the 2023
+master) and into folder names (about 36 per-unit folders end in `SOLD`,
+`Junked`, `total loss` or `NON-OP`, in at least six spellings).
 
 ## 6. Readings as append-only observation events
 
@@ -561,6 +655,11 @@ against, documented operatively in CLAUDE.md/AGENTS.md:
 These are also standing evidence for **scan-over-type**: a QR scan cannot typo
 an asset ID, so every one of these failure modes is one the scanner (`scan.html`)
 sidesteps entirely.
+
+**Evidence (2026-10-23 addendum).** The internal spaces have a likely source:
+Vista stores every equipment code fixed-width and padded (`   H-  06`; 386 of
+390 codes in a 2022 export), while stencils and folders write `H-06`. Collapsing
+whitespace on lookup is what makes the two the same tag.
 
 **Explicitly not.** TrenchNote does not *import* or *sync* the company fleet
 registry — a PM types the existing number in as the tag code once, at
@@ -714,3 +813,9 @@ own. Keep the two mechanisms from bleeding into each other at design time.
 nicely with item 1 (unassigned tag pools): unnumbered attachments are prime
 claim-a-tag candidates, the fastest path from "indented spreadsheet row" to
 "scannable thing."
+
+**Evidence (2026-10-23 addendum).** Vista's equipment master already carries
+both relations, "attach to" and "component of", as separate fields: the same
+line this item draws against ADR 0021. In 2022 one unit of 390 used the first
+and none the second, so the relation exists and goes unused. The field needs
+the link to cost one tap, not that it be possible.
