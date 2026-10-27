@@ -362,6 +362,42 @@ once here and referenced by the items:
 >   matter most for what has no device, such as pickups, trailers and small
 >   gear.
 
+
+> **Evidence addendum — late deliveries and the notice question (added
+> 2026-10-26).** A review of a general contractor's closed jobs, read for how
+> notice was given when something ran late. Corroborating evidence, not a new
+> incident. What it adds:
+>
+> - **The answer was in no one place.** On one job, a purchased conveyor
+>   package was due 2023-07-12. The supplier said nothing until 2023-07-19,
+>   when it admitted the slip, and the company put it on notice under a
+>   purchase-order clause on 2023-07-31: seven days late to learn of it, nineteen
+>   days past due before notice went out. On another job, on 2023-07-27,
+>   the purchasing office asked how late a supplier was and whether it had been
+>   put on notice, and nobody could say. The three dates that answer it
+>   (promised delivery, actual receipt, notice to the supplier) lived in
+>   different people's email and folders.
+> - **A slow chain can look the same.** On a third job, pipe flanges were
+>   ordered 2025-01-23, released 2025-02-20 and delivered 2025-05-05: 102 days
+>   from order to the dock, with the release step in the middle. Whether that
+>   was late depended on a promised date no ledger held.
+> - **What the ledger could hold.** TrenchNote already records the third date
+>   in part: the receiving log (ADR 0013) stamps when a delivery arrived, with
+>   the vendor, the free-text `po_number` and an over/short/damaged note. A
+>   promised date and a notice date would sit beside them as facts a human
+>   types, the way `po_number` is, which answers "how late, and were they put
+>   on notice?" from the record. Items 11 and 12 are the nearest neighbours: one
+>   surfaces material that has sat too long, the other a rental past its
+>   call-off.
+> - **The wall holds.** A promised date typed onto a delivery is not a PO
+>   record, and matching it against an order is the received-vs-ordered
+>   comparison ADR 0013 rules out. The notice itself (a letter, a clause, an
+>   owner's clock) belongs to change management, not here: an owner's notice
+>   period is per contract, not per asset. Whether even the typed promised date
+>   is worth a field is a question for a design session, not a proposal.
+>
+> Evidence only. No item added, no schema or code changed, nothing built.
+
 ---
 
 ## 1. Pre-printed unassigned tag pools
