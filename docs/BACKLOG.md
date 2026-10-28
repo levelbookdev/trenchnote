@@ -398,6 +398,60 @@ once here and referenced by the items:
 >
 > Evidence only. No item added, no schema or code changed, nothing built.
 
+> **Evidence addendum — a current monthly equipment card (added 2026-10-28).**
+> One month's submitted card from a division of about twelve sites: every
+> company-owned item in the division on one card, compiled by a project
+> engineer from the PMs' input and sent to the equipment timecard coordinator on
+> the due date. Read from photos of the card on the day it went in; the reading
+> below is a first read, not confirmed with anyone. Corroborating evidence, not a
+> new incident. What it adds:
+>
+> - **Incident 2's ritual, still running in 2026.** 26 lines: item number, a
+>   description (trucks labelled with their driver's name), the job code for each
+>   Monday week of the month, `X` when not on a job, the last hour-meter or
+>   odometer reading with its date, and a free-text comments column (`IN SHOP`,
+>   `Called off`). The form's printed notes ask for the dates items arrived and
+>   left a site, a reading for anything removed and for everything on site at
+>   month end, and a Friday update by the PM or superintendent. It is still a
+>   movements ledger kept by hand and compiled monthly.
+> - **Readings are the weakest field.** Only about 11 of 26 lines carry a
+>   reading. Missing ones include about half the trucks, both forklifts, a mini
+>   excavator and a light tower. Every reading on the card is dated the same day,
+>   the Monday of the last week rather than month end: either copied forward or
+>   stamped across the board in one sitting. The coordinator's request a week
+>   earlier warned against exactly this ("do not just copy over last month's file
+>   without updating dates, mileage, and hours"). In the `readings` ledger each
+>   value keeps its own `read_at` (ADR 0016), so an old reading shows its age
+>   instead of taking this month's date. Enriches items 6 and 7.
+> - **A job code nobody can check.** One truck is charged for one week to a job
+>   code outside the division's numbering. On the card a typo and a loan to
+>   another division look the same. In TrenchNote the code is derived from the
+>   location the truck was moved to (`locations.job_code`, ADR 0012), so a loan
+>   is a movement on the record and a typo is one wrong location, visible
+>   wherever that location appears. ADR 0022 open issue 1 still applies: the
+>   code is a label, not identity.
+> - **A call-off with no date.** A container reads `Called off` in comments
+>   with `X` for two weeks and no removal date, which the form's own notes ask
+>   for. A move off site in the ledger carries its day (`moved_at`, ADR 0023);
+>   a comment does not. The same gap item 12 records for rentals, here on an
+>   owned asset.
+> - **Idle lives in a conversation.** On this card `X` means "not on a job",
+>   a fourth meaning beside the 2020 cards' `X` for worked. Idle is not a
+>   state the card records, yet the coordinator's request says idle equipment
+>   not reported to the equipment manager may be charged in full, and the
+>   form says anything on site any part of a week is billed unless the
+>   equipment manager authorizes a no-charge reason. The decision that changes
+>   the bill is made out of band, and the card holds no trace of it. Enriches
+>   item 5, whose `idle` is a state a human sets, never a billing rule.
+> - **The wall holds.** The billing rules above are the equipment department's,
+>   recorded here as context. What the card shows is what a ledger export would
+>   have to fill in: presence for any part of a week (ADR 0022's segments), dated
+>   arrivals and departures, and the latest reading with its own date. The
+>   charge, the no-charge reason and the idle call stay with the people who make
+>   them (item 7, and the billing non-goal in [CLAUDE.md](../CLAUDE.md)).
+>
+> Evidence only. No item added, no schema or code changed, nothing built.
+
 ---
 
 ## 1. Pre-printed unassigned tag pools
@@ -645,6 +699,12 @@ cannot come back unchanged, because nobody has to remember to fill it in.
 formats in one month, some on a form two revisions old. One truck went to
 three jobs in three days, so the export's segments must split within a week
 (ADR 0022).
+
+**Evidence (2026-10-28 addendum).** A current monthly card from a division of
+about twelve sites: 26 lines, readings on about 11, every reading dated the
+same day, and a call-off recorded only as a comment with no removal date. The
+fields the card leaves blank or stale are the ones the ledger already dates:
+arrivals and departures (`moved_at`) and each reading's own `read_at`.
 
 ## 8. Company fleet numbers as tag codes — **ADOPTED**
 
